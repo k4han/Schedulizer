@@ -42,6 +42,8 @@ public class ScheduleCommand implements TabExecutor {
                     sender.sendMessage("time <name> <time>: update a task time");
                     sender.sendMessage("status <name> <status>: update a task status");
                     sender.sendMessage("cmd <name> <command>; <command>: update a task command");
+                    sender.sendMessage("condition <name> minplayers:<value> maxplayers:<value> timeofday:<day|night>: set task conditions");
+                    sender.sendMessage("clearcondition <name>: remove all conditions from a task");
                     return true;
                 } else if (args[0].equalsIgnoreCase("reload")) {
                     try {
@@ -95,7 +97,53 @@ public class ScheduleCommand implements TabExecutor {
                     List<String> cmd = List.of(commandStr.split("; "));
                     sConfig.updateCommand(name, cmd);
                     return true;
-
+                } else if (args[0].equalsIgnoreCase("condition")) {
+                    if (args.length < 3) {
+                        sender.sendMessage("Usage: condition <name> minplayers:<value> maxplayers:<value> timeofday:<day|night>");
+                        return false;
+                    }
+                    String name = args[1];
+                    Integer minPlayers = null;
+                    Integer maxPlayers = null;
+                    String timeOfDay = null;
+                    
+                    for (int i = 2; i < args.length; i++) {
+                        String arg = args[i];
+                        if (arg.startsWith("minplayers:")) {
+                            try {
+                                minPlayers = Integer.parseInt(arg.substring(11));
+                            } catch (NumberFormatException e) {
+                                sender.sendMessage("Invalid minplayers value");
+                                return false;
+                            }
+                        } else if (arg.startsWith("maxplayers:")) {
+                            try {
+                                maxPlayers = Integer.parseInt(arg.substring(11));
+                            } catch (NumberFormatException e) {
+                                sender.sendMessage("Invalid maxplayers value");
+                                return false;
+                            }
+                        } else if (arg.startsWith("timeofday:")) {
+                            timeOfDay = arg.substring(10);
+                            if (!timeOfDay.equalsIgnoreCase("day") && !timeOfDay.equalsIgnoreCase("night")) {
+                                sender.sendMessage("Invalid timeofday value (use 'day' or 'night')");
+                                return false;
+                            }
+                        }
+                    }
+                    
+                    sConfig.updateConditions(name, minPlayers, maxPlayers, timeOfDay);
+                    sender.sendMessage("Conditions updated for task: " + name);
+                    return true;
+                } else if (args[0].equalsIgnoreCase("clearcondition")) {
+                    if (args.length < 2) {
+                        sender.sendMessage("Usage: clearcondition <name>");
+                        return false;
+                    }
+                    String name = args[1];
+                    sConfig.clearConditions(name);
+                    sender.sendMessage("Conditions cleared for task: " + name);
+                    return true;
 
                 } else {
                     sender.sendMessage("argument: " + args[0]);
@@ -120,6 +168,8 @@ public class ScheduleCommand implements TabExecutor {
             completions.add("time"); // 3 args
             completions.add("status"); // 3 args
             completions.add("cmd"); // 3 args
+            completions.add("condition"); // 3+ args
+            completions.add("clearcondition"); // 2 args
             completions.add("reload"); // 0 args
 
         } else if (args.length == 2) {
@@ -129,6 +179,11 @@ public class ScheduleCommand implements TabExecutor {
                     args[0].equalsIgnoreCase("help"))
                 return null;
             completions = sConfig.getTasks().stream().map(task -> task.getName()).toList();
+        } else if (args.length >= 3 && args[0].equalsIgnoreCase("condition")) {
+            completions.add("minplayers:");
+            completions.add("maxplayers:");
+            completions.add("timeofday:day");
+            completions.add("timeofday:night");
         } else if (args.length == 3) {
             if (args[0].equalsIgnoreCase("status")) {
                 completions.add("true");

@@ -235,6 +235,26 @@ public class PluginConfig {
         tasks = getSchedule();
     }
 
+    public void updateConditions(String name, Integer minPlayers, Integer maxPlayers, String timeOfDay) {
+        if (minPlayers != null) {
+            scheduler.set(nameConfig + "." + name + ".conditions.min-players", minPlayers);
+        }
+        if (maxPlayers != null) {
+            scheduler.set(nameConfig + "." + name + ".conditions.max-players", maxPlayers);
+        }
+        if (timeOfDay != null) {
+            scheduler.set(nameConfig + "." + name + ".conditions.time-of-day", timeOfDay);
+        }
+        saveConfig();
+        tasks = getSchedule();
+    }
+
+    public void clearConditions(String name) {
+        scheduler.set(nameConfig + "." + name + ".conditions", null);
+        saveConfig();
+        tasks = getSchedule();
+    }
+
     public void addTask(String name, String time, String type, List<String> command) {
         scheduler.set(nameConfig + "." + name + ".enabled", true);
         scheduler.set(nameConfig + "." + name + ".type", type);
