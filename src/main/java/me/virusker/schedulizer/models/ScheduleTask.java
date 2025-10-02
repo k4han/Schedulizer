@@ -13,12 +13,23 @@ public class ScheduleTask {
     private LocalTime dailyTime; // daily
     private long interval; // repeat
     private LocalDateTime lastRunTime;
+    // Conditions
+    private Integer minPlayers;
+    private Integer maxPlayers;
+    private String timeOfDay; // "day", "night", or null for any time
 
     public ScheduleTask(String name, List<String> command, String type, boolean enabled, LocalDateTime executionTime, LocalTime dailyTime, long interval) {
+        this(name, command, type, enabled, executionTime, dailyTime, interval, null, null, null);
+    }
+
+    public ScheduleTask(String name, List<String> command, String type, boolean enabled, LocalDateTime executionTime, LocalTime dailyTime, long interval, Integer minPlayers, Integer maxPlayers, String timeOfDay) {
         this.name = name;
         this.command = command;
         this.type = type;
         this.enabled = enabled;
+        this.minPlayers = minPlayers;
+        this.maxPlayers = maxPlayers;
+        this.timeOfDay = timeOfDay;
 
         if (type.equals("once")) {
             this.executionTime = executionTime;
@@ -60,8 +71,18 @@ public class ScheduleTask {
 
     public void setEnabled(boolean enabled) {
         this.enabled = enabled;
-
     }
 
+    public Integer getMinPlayers() {
+        return minPlayers;
+    }
+
+    public Integer getMaxPlayers() {
+        return maxPlayers;
+    }
+
+    public String getTimeOfDay() {
+        return timeOfDay;
+    }
 
 }

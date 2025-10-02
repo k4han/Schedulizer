@@ -25,3 +25,25 @@ schedules:
     interval: 5  # minute
     command:
     - "say Repeating!"
+  
+  # Example with conditions - only runs during day with at least 2 players
+  daytime_event:
+    enabled: true
+    type: "repeat"
+    interval: 10  # minute
+    conditions:
+      min-players: 2
+      time-of-day: "day"
+    command:
+    - "say Daytime event with players online!"
+  
+  # Example with max players condition - only runs at night with less than 5 players
+  nighttime_event:
+    enabled: true
+    type: "daily"
+    time: "20:00:00"
+    conditions:
+      max-players: 5
+      time-of-day: "night"
+    command:
+    - "say Nighttime event with few players!"

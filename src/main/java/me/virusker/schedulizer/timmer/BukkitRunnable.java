@@ -2,6 +2,7 @@ package me.virusker.schedulizer.timmer;
 
 import me.virusker.schedulizer.config.PluginConfig;
 import me.virusker.schedulizer.models.ScheduleTask;
+import org.bukkit.Bukkit;
 
 import java.time.LocalTime;
 import java.util.HashSet;
@@ -29,6 +30,9 @@ public class BukkitRunnable extends org.bukkit.scheduler.BukkitRunnable {
         for (ScheduleTask task : config.getActiveTasks()) {
 
             if (!task.isEnabled()) continue;
+            
+            // Check conditions before executing
+            if (!checkConditions(task)) continue;
 
             String taskKey = task.getName() + ":" + currentTime.getMinute();
             if (executedTasks.contains(taskKey)) continue;
@@ -64,5 +68,37 @@ public class BukkitRunnable extends org.bukkit.scheduler.BukkitRunnable {
                 config.saveConfig();
             }
         }
+    }
+
+    private boolean checkConditions(ScheduleTask task) {
+        // Check player count conditions
+        if (task.getMinPlayers() != null || task.getMaxPlayers() != null) {
+            int onlinePlayers = Bukkit.getOnlinePlayers().size();
+            
+            if (task.getMinPlayers() != null && onlinePlayers < task.getMinPlayers()) {
+                return false;
+            }
+            
+            if (task.getMaxPlayers() != null && onlinePlayers > task.getMaxPlayers()) {
+                return false;
+            }
+        }
+        
+        // Check time of day condition (Minecraft time)
+        if (task.getTimeOfDay() != null && !task.getTimeOfDay().isEmpty()) {
+            long mcTime = config.getPlugin().getServer().getWorlds().get(0).getTime();
+            // Minecraft time: 0-12000 is day, 12000-24000 is night
+            boolean isDay = mcTime >= 0 && mcTime < 12000;
+            
+            if (task.getTimeOfDay().equalsIgnoreCase("day") && !isDay) {
+                return false;
+            }
+            
+            if (task.getTimeOfDay().equalsIgnoreCase("night") && isDay) {
+                return false;
+            }
+        }
+        
+        return true;
     }
 }

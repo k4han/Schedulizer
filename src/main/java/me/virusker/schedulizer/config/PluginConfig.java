@@ -98,8 +98,11 @@ public class PluginConfig {
             List<String> command = taskSection.getStringList("command");
             String type = taskSection.getString("type");
             boolean enabled = taskSection.getBoolean("enabled");
-
-
+            
+            // Read conditions
+            Integer minPlayers = taskSection.isSet("conditions.min-players") ? taskSection.getInt("conditions.min-players") : null;
+            Integer maxPlayers = taskSection.isSet("conditions.max-players") ? taskSection.getInt("conditions.max-players") : null;
+            String timeOfDay = taskSection.isSet("conditions.time-of-day") ? taskSection.getString("conditions.time-of-day") : null;
 
             if (type.equals("once")) {
                 // format time (dd/MM/yyyy HH:mm)
@@ -117,7 +120,10 @@ public class PluginConfig {
                         enabled,
                         time,
                         null,
-                        0
+                        0,
+                        minPlayers,
+                        maxPlayers,
+                        timeOfDay
                 );
                 if (taskSection.getBoolean("enabled")) {
                     activeTasks.add(task);
@@ -139,7 +145,10 @@ public class PluginConfig {
                         enabled,
                         null,
                         time,
-                        0
+                        0,
+                        minPlayers,
+                        maxPlayers,
+                        timeOfDay
                 );
                 if (taskSection.getBoolean("enabled")) {
                     activeTasks.add(task);
@@ -160,7 +169,10 @@ public class PluginConfig {
                         enabled,
                         null,
                         null,
-                        time
+                        time,
+                        minPlayers,
+                        maxPlayers,
+                        timeOfDay
                 );
                 if (taskSection.getBoolean("enabled")) {
                     activeTasks.add(task);
