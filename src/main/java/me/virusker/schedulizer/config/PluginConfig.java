@@ -32,9 +32,9 @@ public class PluginConfig {
     private String dateTimeFormat;
     private DateTimeFormatter formatter;
 
-    private final String dailyPattern = "\\d{2}:\\d{2}";
+    private final String dailyPattern = "^\\d{2}:\\d{2}(:\\d{2})?$";
 
-    private final String repeatPattern = "\\d+";
+    private final String repeatPattern = "^\\d+$";
     private final CronParser cronParser;
 
     public PluginConfig(JavaPlugin plugin) {
