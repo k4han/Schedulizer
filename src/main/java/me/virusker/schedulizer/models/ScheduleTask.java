@@ -7,14 +7,16 @@ import java.util.List;
 public class ScheduleTask {
     private final String name;
     private final List<String> command;
-    private final String type; // "once", "repeat" or "daily"
+    private final String type; // "once", "repeat", "daily" or "cron"
     private boolean enabled;
     private LocalDateTime executionTime; // once
     private LocalTime dailyTime; // daily
     private long interval; // repeat
+    private String cronExpression; // cron
     private LocalDateTime lastRunTime;
 
-    public ScheduleTask(String name, List<String> command, String type, boolean enabled, LocalDateTime executionTime, LocalTime dailyTime, long interval) {
+    public ScheduleTask(String name, List<String> command, String type, boolean enabled, 
+                        LocalDateTime executionTime, LocalTime dailyTime, long interval, String cronExpression) {
         this.name = name;
         this.command = command;
         this.type = type;
@@ -26,6 +28,8 @@ public class ScheduleTask {
             this.dailyTime = dailyTime;
         } else if (type.equals("repeat")) {
             this.interval = interval;
+        } else if (type.equals("cron")) {
+            this.cronExpression = cronExpression;
         }
 
     }
@@ -56,6 +60,10 @@ public class ScheduleTask {
 
     public long getInterval() {
         return interval;
+    }
+
+    public String getCronExpression() {
+        return cronExpression;
     }
 
     public void setEnabled(boolean enabled) {

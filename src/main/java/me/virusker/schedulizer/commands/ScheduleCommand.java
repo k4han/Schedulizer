@@ -37,11 +37,12 @@ public class ScheduleCommand implements TabExecutor {
                     return true;
                 } else if (args[0].equalsIgnoreCase("help")) {
                     sender.sendMessage("list: list all tasks");
-                    sender.sendMessage("add <name> <time> <type> <command>: add a task");
+                    sender.sendMessage("add <name> <time/cron> <type> <command>: add a task");
                     sender.sendMessage("remove <name>: remove a task");
                     sender.sendMessage("time <name> <time>: update a task time");
                     sender.sendMessage("status <name> <status>: update a task status");
                     sender.sendMessage("cmd <name> <command>; <command>: update a task command");
+                    sender.sendMessage("Supported types: once, daily, repeat, cron");
                     return true;
                 } else if (args[0].equalsIgnoreCase("reload")) {
                     try {

@@ -1,9 +1,15 @@
 package me.virusker.schedulizer.timmer;
 
+import com.cronutils.model.Cron;
+import com.cronutils.model.definition.CronDefinitionBuilder;
+import com.cronutils.model.time.ExecutionTime;
+import com.cronutils.parser.CronParser;
 import me.virusker.schedulizer.config.PluginConfig;
 import me.virusker.schedulizer.models.ScheduleTask;
 
 import java.time.LocalTime;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -25,6 +31,7 @@ public class BukkitRunnable extends org.bukkit.scheduler.BukkitRunnable {
             executedTasks.clear();
         }
         int totalMinutes = currentTime.getHour() * 60 + currentTime.getMinute();
+        ZonedDateTime now = ZonedDateTime.now(config.getZoneId());
 
         for (ScheduleTask task : config.getActiveTasks()) {
 
@@ -62,6 +69,23 @@ public class BukkitRunnable extends org.bukkit.scheduler.BukkitRunnable {
                 task.setEnabled(false);
                 config.updateSchedule(task);
                 config.saveConfig();
+            } else if (task.getType().equals("cron")) {
+                // Check if current time matches cron expression
+                try {
+                    CronParser cronParser = new CronParser(CronDefinitionBuilder.instanceDefinitionFor(com.cronutils.model.CronType.UNIX));
+                    Cron cron = cronParser.parse(task.getCronExpression());
+                    ExecutionTime executionTime = ExecutionTime.forCron(cron);
+                    
+                    // Check if current time is an execution time
+                    if (executionTime.isMatch(now)) {
+                        for (String command : task.getCommand()) {
+                            config.getPlugin().getServer().dispatchCommand(config.getPlugin().getServer().getConsoleSender(), command);
+                        }
+                        executedTasks.add(taskKey);
+                    }
+                } catch (Exception e) {
+                    config.getPlugin().getLogger().warning("Error executing cron task " + task.getName() + ": " + e.getMessage());
+                }
             }
         }
     }

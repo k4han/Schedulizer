@@ -4,10 +4,15 @@ main: me.virusker.schedulizer.Schedulizer
 author: Kh4n
 api-version: '1.21'
 
+permissions:
+  schedulizer.use:
+    description: "Allows access to Schedulizer commands"
+    default: op
+
 commands:
   Schedulizer:
     description: "This is a command"
     usage: "/Schedulizer"
     aliases: [ Schedulizer ]
-    permission: op
+    permission: schedulizer.use
     permission-message: "You do not have permission to use this command"

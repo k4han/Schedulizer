@@ -1,5 +1,9 @@
 package me.virusker.schedulizer.config;
 
+import com.cronutils.model.Cron;
+import com.cronutils.model.CronType;
+import com.cronutils.model.definition.CronDefinitionBuilder;
+import com.cronutils.parser.CronParser;
 import me.virusker.schedulizer.models.ScheduleTask;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.InvalidConfigurationException;
@@ -9,6 +13,7 @@ import org.bukkit.plugin.java.JavaPlugin;
 
 import java.io.File;
 import java.io.IOException;
+import java.time.DateTimeException;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.ZoneId;
@@ -30,6 +35,7 @@ public class PluginConfig {
     private final String dailyPattern = "\\d{2}:\\d{2}";
 
     private final String repeatPattern = "\\d+";
+    private final CronParser cronParser;
 
     public PluginConfig(JavaPlugin plugin) {
         File file = new File(plugin.getDataFolder(), scheduleFile);
@@ -45,6 +51,8 @@ public class PluginConfig {
         else
             this.formatter = DateTimeFormatter.ofPattern(dateTimeFormat);
 
+        // Initialize cron parser with UNIX type (minute, hour, day, month, weekday)
+        this.cronParser = new CronParser(CronDefinitionBuilder.instanceDefinitionFor(CronType.UNIX));
         this.tasks = getSchedule();
     }
 
@@ -54,7 +62,15 @@ public class PluginConfig {
 
     public ZoneId getZoneId() {
         String timezone = config.getString("timezone");
-        return (timezone == null || timezone.isEmpty()) ? ZoneId.systemDefault() : ZoneId.of(timezone);
+        if (timezone == null || timezone.isEmpty()) {
+            return ZoneId.systemDefault();
+        }
+        try {
+            return ZoneId.of(timezone);
+        } catch (DateTimeException e) {
+            plugin.getLogger().warning("Invalid timezone '" + timezone + "', using system default: " + e.getMessage());
+            return ZoneId.systemDefault();
+        }
     }
 
     public long getTick() {
@@ -117,7 +133,8 @@ public class PluginConfig {
                         enabled,
                         time,
                         null,
-                        0
+                        0,
+                        null
                 );
                 if (taskSection.getBoolean("enabled")) {
                     activeTasks.add(task);
@@ -139,7 +156,8 @@ public class PluginConfig {
                         enabled,
                         null,
                         time,
-                        0
+                        0,
+                        null
                 );
                 if (taskSection.getBoolean("enabled")) {
                     activeTasks.add(task);
@@ -160,7 +178,31 @@ public class PluginConfig {
                         enabled,
                         null,
                         null,
-                        time
+                        time,
+                        null
+                );
+                if (taskSection.getBoolean("enabled")) {
+                    activeTasks.add(task);
+                }
+                schedule.add(task);
+            } else if (type.equals("cron")) {
+                // format: cron expression (e.g., "0 0 * * *")
+                String cronExpr = taskSection.getString("cron");
+                try {
+                    cronParser.parse(cronExpr);
+                } catch (Exception e) {
+                    plugin.getLogger().warning("Invalid cron expression for task " + key + ": " + cronExpr);
+                    continue;
+                }
+                ScheduleTask task = new ScheduleTask(
+                        key,
+                        command,
+                        type,
+                        enabled,
+                        null,
+                        null,
+                        0,
+                        cronExpr
                 );
                 if (taskSection.getBoolean("enabled")) {
                     activeTasks.add(task);
@@ -205,6 +247,13 @@ public class PluginConfig {
                 return "Invalid time format (minutes)";
             }
             scheduler.set(nameConfig + "." + name + ".interval", time);
+        } else if (taskType.equals("cron")) {
+            try {
+                cronParser.parse(time);
+            } catch (Exception e) {
+                return "Invalid cron expression";
+            }
+            scheduler.set(nameConfig + "." + name + ".cron", time);
         }
         saveConfig();
         tasks = getSchedule();
@@ -232,6 +281,8 @@ public class PluginConfig {
             scheduler.set(nameConfig + "." + name + ".time", time);
         } else if (type.equals("repeat")) {
             scheduler.set(nameConfig + "." + name + ".interval", time);
+        } else if (type.equals("cron")) {
+            scheduler.set(nameConfig + "." + name + ".cron", time);
         }
         scheduler.set(nameConfig + "." + name + ".command", command);
         saveConfig();

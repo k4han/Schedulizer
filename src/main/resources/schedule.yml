@@ -1,11 +1,11 @@
 
-# supported types: once, daily, repeat
+# supported types: once, daily, repeat, cron
 schedules:
   # One time event
   first_time_event:
     enabled: true
     type: "once"
-    time: "2025-02-08 15:30:00"
+    time: "2025-02-08 15:30:00" #
     command:
     - "say one time event!"
     - "say Welcome first time!"
@@ -25,3 +25,20 @@ schedules:
     interval: 5  # minute
     command:
     - "say Repeating!"
+
+# https://crontab.guru/
+  # Cron-based event (UNIX cron format: minute hour day month weekday)
+  cron_event:
+    enabled: true
+    type: "cron"
+    cron: "0 0 * * *"  # Every day at midnight
+    command:
+    - "say Cron event triggered!"
+
+  # Another cron example: every 15 minutes
+  cron_15min:
+    enabled: false
+    type: "cron"
+    cron: "*/15 * * * *"  # Every 15 minutes
+    command:
+    - "say 15 minutes passed!"

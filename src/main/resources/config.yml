@@ -11,7 +11,7 @@
 #(20 ticks = 1 second, recommended 300 ticks = 15 seconds for performance and < 1200 ticks = 1 minute)
 tick: 300
 
-# https://www.timezoneconverter.com/cgi-bin/timezones
+# https://en.wikipedia.org/wiki/List_of_tz_database_time_zones
 timezone: "Asia/Ho_Chi_Minh"
 
 # dd/MM/yyyy HH:mm, yyyy-MM-dd HH:mm
