@@ -7,6 +7,7 @@ import com.cronutils.parser.CronParser;
 import me.virusker.schedulizer.config.PluginConfig;
 import me.virusker.schedulizer.models.ScheduleTask;
 
+import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
@@ -30,7 +31,14 @@ public class BukkitRunnable extends org.bukkit.scheduler.BukkitRunnable {
             lastCheckedMinute = currentTime.getMinute();
             executedTasks.clear();
         }
-        int totalMinutes = currentTime.getHour() * 60 + currentTime.getMinute();
+        
+        // Calculate total minutes from epoch (1970-01-01) to avoid reset at midnight
+        LocalDate today = LocalDate.now(config.getZoneId());
+        long daysSinceEpoch = today.toEpochDay();
+        long totalMinutes = daysSinceEpoch * 24 * 60 + 
+                            currentTime.getHour() * 60 + 
+                            currentTime.getMinute();
+        
         ZonedDateTime now = ZonedDateTime.now(config.getZoneId());
 
         for (ScheduleTask task : config.getActiveTasks()) {
@@ -43,7 +51,7 @@ public class BukkitRunnable extends org.bukkit.scheduler.BukkitRunnable {
             if (task.getType().equals("repeat")) {
 
                 long interval = task.getInterval();
-                int minutesSinceStart = totalMinutes - task.getStartMinutes();
+                long minutesSinceStart = totalMinutes - task.getStartMinutes();
                 if (minutesSinceStart >= 0 && minutesSinceStart % interval == 0) {
 
                     for (String command : task.getCommand()) {

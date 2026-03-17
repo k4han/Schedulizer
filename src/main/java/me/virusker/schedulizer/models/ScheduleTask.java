@@ -14,7 +14,7 @@ public class ScheduleTask {
     private long interval; // repeat
     private String cronExpression; // cron
     private LocalDateTime lastRunTime;
-    private int startMinutes; // repeat - minutes from midnight when task starts
+    private int startMinutes; // minutes from epoch (1970-01-01) when task should start
 
     public ScheduleTask(String name, List<String> command, String type, boolean enabled,
                         LocalDateTime executionTime, LocalTime dailyTime, long interval, String cronExpression) {

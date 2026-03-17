@@ -23,7 +23,7 @@ schedules:
     enabled: true
     type: "repeat"
     interval: 5  # minute
-    start_minutes: 0  # minutes from midnight (0 = 00:00, 60 = 01:00, etc.)
+    # start_minutes: 0  # Optional: offset in minutes (0 = :00, 3 = :03, 7 = :07...)
     command:
     - "say Repeating!"
 
