@@ -7,8 +7,24 @@
 
 # version: 1.0
 
-# The number of ticks per scheduler run
-#(20 ticks = 1 second, recommended 300 ticks = 15 seconds for performance and < 1200 ticks = 1 minute)
+# ============================================================
+# SCHEDULER TICK CONFIGURATION
+# ============================================================
+# Minecraft runs at 20 ticks/second. This determines how often
+# the plugin checks and executes scheduled tasks.
+#
+# Formula: tick / 20 = seconds between checks
+# Examples: 20=1s, 60=3s, 300=15s (default), 1200=1min
+#
+# Note: Lower tick = more accurate but higher resource usage
+#       Higher tick = better performance but more delay
+#
+# Recommendations:
+# - Daily/cron tasks: 1200 (1 min)
+# - Repeat ≥ 5 min: 300-600 (15-30s)
+# - Repeat < 5 min: 60-120 (3-6s)
+# - Do not set below 20 (1s) to avoid lag
+# ============================================================
 tick: 300
 
 # https://en.wikipedia.org/wiki/List_of_tz_database_time_zones
