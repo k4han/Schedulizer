@@ -47,6 +47,7 @@ public class ScheduleCommand implements TabExecutor {
                 } else if (args[0].equalsIgnoreCase("reload")) {
                     try {
                         sConfig.reload();
+                        sender.sendMessage("Plugin reloaded successfully");
                     } catch (IOException | InvalidConfigurationException e) {
                         throw new RuntimeException(e);
                     }
@@ -73,9 +74,9 @@ public class ScheduleCommand implements TabExecutor {
                     sender.sendMessage("Task added successfully");
                     return true;
                 } else if (args[0].equalsIgnoreCase("remove")) {
-
                     String name = args[1];
                     sConfig.removeTask(name);
+                    sender.sendMessage("Task '" + name + "' removed successfully");
                     return true;
                 } else if (args[0].equalsIgnoreCase("time")) {
 //                    sender.sendMessage("update");
@@ -95,11 +96,11 @@ public class ScheduleCommand implements TabExecutor {
 
                     return true;
                 } else if (args[0].equalsIgnoreCase("cmd")) {
-                    sender.sendMessage("cmd");
                     String name = args[1];
                     String commandStr = String.join(" ", Arrays.copyOfRange(args, 2, args.length));
                     List<String> cmd = List.of(commandStr.split("; "));
                     sConfig.updateCommand(name, cmd);
+                    sender.sendMessage("Task '" + name + "' command updated successfully");
                     return true;
 
 
