@@ -277,21 +277,47 @@ public class PluginConfig {
         tasks = getSchedule();
     }
 
-    public void addTask(String name, String time, String type, List<String> command) {
-        scheduler.set(nameConfig + "." + name + ".enabled", true);
-        scheduler.set(nameConfig + "." + name + ".type", type);
+    public boolean addTask(String name, String time, String type, List<String> command) {
+        // Validate time format based on task type
         if (type.equals("once")) {
+            try {
+                LocalDateTime.parse(time, formatter);
+            } catch (Exception e) {
+                plugin.getLogger().warning("Invalid time format for task '" + name + "': " + time + " (expected: " + dateTimeFormat + ")");
+                return false;
+            }
             scheduler.set(nameConfig + "." + name + ".time", time);
         } else if (type.equals("daily")) {
+            if (!time.matches(dailyPattern)) {
+                plugin.getLogger().warning("Invalid time format for task '" + name + "': " + time + " (expected: HH:mm)");
+                return false;
+            }
             scheduler.set(nameConfig + "." + name + ".time", time);
         } else if (type.equals("repeat")) {
+            if (!time.matches(repeatPattern)) {
+                plugin.getLogger().warning("Invalid time format for task '" + name + "': " + time + " (expected: minutes as integer)");
+                return false;
+            }
             scheduler.set(nameConfig + "." + name + ".interval", time);
         } else if (type.equals("cron")) {
+            try {
+                cronParser.parse(time);
+            } catch (Exception e) {
+                plugin.getLogger().warning("Invalid cron expression for task '" + name + "': " + time);
+                return false;
+            }
             scheduler.set(nameConfig + "." + name + ".cron", time);
+        } else {
+            plugin.getLogger().warning("Invalid task type for task '" + name + "': " + type + " (supported: once, daily, repeat, cron)");
+            return false;
         }
+        
+        scheduler.set(nameConfig + "." + name + ".enabled", true);
+        scheduler.set(nameConfig + "." + name + ".type", type);
         scheduler.set(nameConfig + "." + name + ".command", command);
         saveConfig();
         this.tasks = getSchedule();
+        return true;
     }
 
     public void removeTask(String name) {

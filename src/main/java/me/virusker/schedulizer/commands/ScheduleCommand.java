@@ -65,7 +65,12 @@ public class ScheduleCommand implements TabExecutor {
                     String commandStr = String.join(" ", Arrays.copyOfRange(args, 4, args.length));
                     List<String> cmd = List.of(commandStr.split("; "));
 
-                    sConfig.addTask(name, time, type, cmd);
+                    boolean success = sConfig.addTask(name, time, type, cmd);
+                    if (!success) {
+                        sender.sendMessage("Failed to add task: Invalid time format or type");
+                        return false;
+                    }
+                    sender.sendMessage("Task added successfully");
                     return true;
                 } else if (args[0].equalsIgnoreCase("remove")) {
 
