@@ -14,13 +14,20 @@ public class ScheduleTask {
     private long interval; // repeat
     private String cronExpression; // cron
     private LocalDateTime lastRunTime;
+    private int startMinutes; // repeat - minutes from midnight when task starts
 
-    public ScheduleTask(String name, List<String> command, String type, boolean enabled, 
+    public ScheduleTask(String name, List<String> command, String type, boolean enabled,
                         LocalDateTime executionTime, LocalTime dailyTime, long interval, String cronExpression) {
+        this(name, command, type, enabled, executionTime, dailyTime, interval, cronExpression, 0);
+    }
+
+    public ScheduleTask(String name, List<String> command, String type, boolean enabled,
+                        LocalDateTime executionTime, LocalTime dailyTime, long interval, String cronExpression, int startMinutes) {
         this.name = name;
         this.command = command;
         this.type = type;
         this.enabled = enabled;
+        this.startMinutes = startMinutes;
 
         if (type.equals("once")) {
             this.executionTime = executionTime;
@@ -69,6 +76,14 @@ public class ScheduleTask {
     public void setEnabled(boolean enabled) {
         this.enabled = enabled;
 
+    }
+
+    public int getStartMinutes() {
+        return startMinutes;
+    }
+
+    public void setStartMinutes(int startMinutes) {
+        this.startMinutes = startMinutes;
     }
 
 

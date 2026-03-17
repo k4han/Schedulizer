@@ -5,7 +5,7 @@ schedules:
   first_time_event:
     enabled: true
     type: "once"
-    time: "2025-02-08 15:30:00" #
+    time: "2025-02-08 15:30:00" # YYYY-MM-DD HH:MM:SS
     command:
     - "say one time event!"
     - "say Welcome first time!"
@@ -14,7 +14,7 @@ schedules:
   daily_reset:
     enabled: true
     type: "daily"
-    time: "12:00:00"
+    time: "12:00:00" # HH:MM:SS
     command:
     - "say new Daily!"
 
@@ -23,10 +23,11 @@ schedules:
     enabled: true
     type: "repeat"
     interval: 5  # minute
+    start_minutes: 0  # minutes from midnight (0 = 00:00, 60 = 01:00, etc.)
     command:
     - "say Repeating!"
 
-# https://crontab.guru/
+      # https://crontab.guru/ - Use this link to generate cron expressions easily
   # Cron-based event (UNIX cron format: minute hour day month weekday)
   cron_event:
     enabled: true

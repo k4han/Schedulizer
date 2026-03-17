@@ -171,6 +171,7 @@ public class PluginConfig {
                     continue;
                 }
                 long time = Long.parseLong(time_);
+                int startMinutes = taskSection.getInt("start_minutes", 0);
                 ScheduleTask task = new ScheduleTask(
                         key,
                         command,
@@ -179,7 +180,8 @@ public class PluginConfig {
                         null,
                         null,
                         time,
-                        null
+                        null,
+                        startMinutes
                 );
                 if (taskSection.getBoolean("enabled")) {
                     activeTasks.add(task);
@@ -247,6 +249,9 @@ public class PluginConfig {
                 return "Invalid time format (minutes)";
             }
             scheduler.set(nameConfig + "." + name + ".interval", time);
+            // Also update start_minutes if provided in config (default 0)
+            int startMinutes = scheduler.getInt(nameConfig + "." + name + ".start_minutes", 0);
+            scheduler.set(nameConfig + "." + name + ".start_minutes", startMinutes);
         } else if (taskType.equals("cron")) {
             try {
                 cronParser.parse(time);

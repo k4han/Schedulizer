@@ -43,7 +43,8 @@ public class BukkitRunnable extends org.bukkit.scheduler.BukkitRunnable {
             if (task.getType().equals("repeat")) {
 
                 long interval = task.getInterval();
-                if ( totalMinutes % interval == 0) {
+                int minutesSinceStart = totalMinutes - task.getStartMinutes();
+                if (minutesSinceStart >= 0 && minutesSinceStart % interval == 0) {
 
                     for (String command : task.getCommand()) {
                         config.getPlugin().getServer().dispatchCommand(config.getPlugin().getServer().getConsoleSender(), command);
