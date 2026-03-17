@@ -1,149 +1,120 @@
 package me.virusker.schedulizer.commands;
 
+import me.virusker.schedulizer.commands.subcommand.*;
 import me.virusker.schedulizer.config.PluginConfig;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.TabExecutor;
-import org.bukkit.configuration.InvalidConfigurationException;
+import org.bukkit.entity.Player;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
+import java.util.*;
 
 public class ScheduleCommand implements TabExecutor {
-    private PluginConfig sConfig;
+    private final PluginConfig pluginConfig;
+    private final Map<String, BaseCommand> subCommands;
 
-    public ScheduleCommand(PluginConfig sConfig) {
-        this.sConfig = sConfig;
+    public ScheduleCommand(PluginConfig pluginConfig) {
+        this.pluginConfig = pluginConfig;
+        this.subCommands = new HashMap<>();
+        
+        // Register all sub-commands
+        registerSubCommand(new HelpCommand(pluginConfig));
+        registerSubCommand(new ListCommand(pluginConfig));
+        registerSubCommand(new ReloadCommand(pluginConfig));
+        registerSubCommand(new AddCommand(pluginConfig));
+        registerSubCommand(new RemoveCommand(pluginConfig));
+        registerSubCommand(new TimeCommand(pluginConfig));
+        registerSubCommand(new StatusCommand(pluginConfig));
+        registerSubCommand(new CmdCommand(pluginConfig));
+        registerSubCommand(new InfoCommand(pluginConfig));
+        registerSubCommand(new ExecuteCommand(pluginConfig));
+    }
+
+    private void registerSubCommand(BaseCommand command) {
+        subCommands.put(command.getName().toLowerCase(), command);
     }
 
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
-
-        if (label.equalsIgnoreCase("Schedulizer")) {
-//            sender.sendMessage("Schedule command");
-//            return true;
-
-            if (args.length == 0) {
-                sender.sendMessage("You must provide an argument");
-                return false;
-            } else if (args.length == 1) {
-                if (args[0].equalsIgnoreCase("list")) {
-                    sender.sendMessage("list");
-                    sConfig.getTasks().forEach(task -> {
-                        sender.sendMessage(task.getName());
-                    });
-                    return true;
-                } else if (args[0].equalsIgnoreCase("help")) {
-                    sender.sendMessage("list: list all tasks");
-                    sender.sendMessage("add <name> <time/cron> <type> <command>: add a task");
-                    sender.sendMessage("remove <name>: remove a task");
-                    sender.sendMessage("time <name> <time>: update a task time");
-                    sender.sendMessage("status <name> <status>: update a task status");
-                    sender.sendMessage("cmd <name> <command>; <command>: update a task command");
-                    sender.sendMessage("Supported types: once, daily, repeat, cron");
-                    return true;
-                } else if (args[0].equalsIgnoreCase("reload")) {
-                    try {
-                        sConfig.reload();
-                        sender.sendMessage("Plugin reloaded successfully");
-                    } catch (IOException | InvalidConfigurationException e) {
-                        throw new RuntimeException(e);
-                    }
-                    return true;
-                }
-            } else {
-                if (args[0].equalsIgnoreCase("add")) {
-                    if (args.length < 4) {
-                        sender.sendMessage("You must provide a name, time, command and type");
-                        return false;
-                    }
-                    String name = args[1];
-                    String time = args[2];
-                    String type = args[3];
-
-                    String commandStr = String.join(" ", Arrays.copyOfRange(args, 4, args.length));
-                    List<String> cmd = List.of(commandStr.split("; "));
-
-                    boolean success = sConfig.addTask(name, time, type, cmd);
-                    if (!success) {
-                        sender.sendMessage("Failed to add task: Invalid time format or type");
-                        return false;
-                    }
-                    sender.sendMessage("Task added successfully");
-                    return true;
-                } else if (args[0].equalsIgnoreCase("remove")) {
-                    String name = args[1];
-                    sConfig.removeTask(name);
-                    sender.sendMessage("Task '" + name + "' removed successfully");
-                    return true;
-                } else if (args[0].equalsIgnoreCase("time")) {
-//                    sender.sendMessage("update");
-                    String name = args[1];
-                    String time = String.join(" ", Arrays.copyOfRange(args, 2, args.length));
-                    String r = sConfig.updateTime(name, time);
-                    sender.sendMessage(r);
-//                    sConfig.updateTime();
-                    return true;
-                } else if (args[0].equalsIgnoreCase("status")) {
-
-                    String name = args[1];
-                    boolean status = args[2].equalsIgnoreCase("true") || args[2].equals("1");
-
-                    sender.sendMessage("> " + name + ": " + status);
-                    sConfig.updateStatus(name, status);
-
-                    return true;
-                } else if (args[0].equalsIgnoreCase("cmd")) {
-                    String name = args[1];
-                    String commandStr = String.join(" ", Arrays.copyOfRange(args, 2, args.length));
-                    List<String> cmd = List.of(commandStr.split("; "));
-                    sConfig.updateCommand(name, cmd);
-                    sender.sendMessage("Task '" + name + "' command updated successfully");
-                    return true;
-
-
-                } else {
-                    sender.sendMessage("argument: " + args[0]);
-                    return true;
-                }
-
-            }
-
+        // Check base permission
+        if (!sender.hasPermission("schedulizer.use")) {
+            sender.sendMessage("&cYou do not have permission to use this command.");
+            return true;
         }
 
-        return false;
+        // If no arguments, show help
+        if (args.length == 0) {
+            subCommands.get("help").execute(sender, args);
+            return true;
+        }
+
+        String subCommandName = args[0].toLowerCase();
+        BaseCommand subCommand = subCommands.get(subCommandName);
+
+        // Unknown sub-command
+        if (subCommand == null) {
+            sender.sendMessage("&cUnknown command: &e" + subCommandName);
+            sender.sendMessage("&7Use &e/Schedulizer help &7to see available commands.");
+            return true;
+        }
+
+        // Check sub-command permission
+        if (!subCommand.checkPermission(sender)) {
+            return true;
+        }
+
+        // Check minimum arguments
+        if (args.length - 1 < subCommand.getMinArgs()) {
+            sender.sendMessage("&cUsage: " + subCommand.getUsage());
+            return true;
+        }
+
+        // Execute the sub-command
+        try {
+            return subCommand.execute(sender, Arrays.copyOfRange(args, 1, args.length));
+        } catch (Exception e) {
+            pluginConfig.getPlugin().getLogger().severe(
+                "Error executing command '" + subCommand.getName() + "': " + e.getMessage()
+            );
+            sender.sendMessage("&cAn error occurred while executing this command. Check console for details.");
+            return false;
+        }
     }
 
     @Override
     public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
-        List<String> completions = new ArrayList<>();
-        if (args.length == 1) {
-            completions.add("help"); // 0 args
-            completions.add("list");  // 0 args
-            completions.add("add"); // 4 args
-            completions.add("remove"); // 2 args
-            completions.add("time"); // 3 args
-            completions.add("status"); // 3 args
-            completions.add("cmd"); // 3 args
-            completions.add("reload"); // 0 args
-
-        } else if (args.length == 2) {
-            if (args[0].equalsIgnoreCase("list") ||
-                    args[0].equalsIgnoreCase("add") ||
-                    args[0].equalsIgnoreCase("reload") ||
-                    args[0].equalsIgnoreCase("help"))
-                return null;
-            completions = sConfig.getTasks().stream().map(task -> task.getName()).toList();
-        } else if (args.length == 3) {
-            if (args[0].equalsIgnoreCase("status")) {
-                completions.add("true");
-                completions.add("false");
-            } else {
-                return null;
-            }
+        // Check base permission
+        if (!sender.hasPermission("schedulizer.use")) {
+            return new ArrayList<>();
         }
-        return completions;
+
+        // If only one argument, complete sub-command names
+        if (args.length == 1) {
+            List<String> completions = new ArrayList<>();
+            String partial = args[0].toLowerCase();
+            
+            for (BaseCommand subCommand : subCommands.values()) {
+                if (subCommand.checkPermission(sender)) {
+                    String name = subCommand.getName().toLowerCase();
+                    if (name.startsWith(partial)) {
+                        completions.add(name);
+                    }
+                }
+            }
+            
+            return completions;
+        }
+
+        // Get the sub-command for further completions
+        String subCommandName = args[0].toLowerCase();
+        BaseCommand subCommand = subCommands.get(subCommandName);
+
+        if (subCommand != null && subCommand.checkPermission(sender)) {
+            // Pass the remaining arguments to the sub-command
+            String[] subArgs = Arrays.copyOfRange(args, 1, args.length);
+            return subCommand.getCompletions(sender, subArgs);
+        }
+
+        return new ArrayList<>();
     }
 }

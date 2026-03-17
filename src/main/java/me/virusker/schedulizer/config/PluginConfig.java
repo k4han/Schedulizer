@@ -60,6 +60,18 @@ public class PluginConfig {
         return tasks;
     }
 
+    public DateTimeFormatter getFormatter() {
+        return formatter;
+    }
+
+    public String getDateTimeFormat() {
+        return dateTimeFormat;
+    }
+
+    public CronParser getCronParser() {
+        return cronParser;
+    }
+
     public ZoneId getZoneId() {
         String timezone = config.getString("timezone");
         if (timezone == null || timezone.isEmpty()) {
@@ -101,19 +113,26 @@ public class PluginConfig {
     }
 
     public List<ScheduleTask> getSchedule() {
-        List<ScheduleTask> schedule = new ArrayList<ScheduleTask>();
+        List<ScheduleTask> schedule = new ArrayList<>();
         activeTasks.clear();
-        for (String key : scheduler.getConfigurationSection(nameConfig).getKeys(false)) {
-
+        
+        ConfigurationSection section = scheduler.getConfigurationSection(nameConfig);
+        if (section == null) {
+            return schedule;
+        }
+        
+        for (String key : section.getKeys(false)) {
             ConfigurationSection taskSection = scheduler.getConfigurationSection(nameConfig + "." + key);
             if (taskSection == null) continue;
 
-//            if (isEnabled && !taskSection.getBoolean("enabled")) {
-//                continue;
-//            }
             List<String> command = taskSection.getStringList("command");
             String type = taskSection.getString("type");
             boolean enabled = taskSection.getBoolean("enabled");
+
+            if (type == null || command == null) {
+                plugin.getLogger().warning("Task '" + key + "' has invalid configuration (missing type or command). Skipping...");
+                continue;
+            }
 
 
 
@@ -122,8 +141,13 @@ public class PluginConfig {
                 LocalDateTime time;
                 try {
                     String time_ = taskSection.getString("time");
+                    if (time_ == null) {
+                        plugin.getLogger().warning("Task '" + key + "' (once) is missing 'time' field. Skipping...");
+                        continue;
+                    }
                     time = LocalDateTime.parse(time_, formatter);
                 } catch (Exception e) {
+                    plugin.getLogger().warning("Task '" + key + "' has invalid time format: " + e.getMessage() + ". Skipping...");
                     continue;
                 }
                 ScheduleTask task = new ScheduleTask(
@@ -144,7 +168,12 @@ public class PluginConfig {
             } else if (type.equals("daily")) {
                 // format time (HH:mm)
                 String time_ = taskSection.getString("time");
+                if (time_ == null) {
+                    plugin.getLogger().warning("Task '" + key + "' (daily) is missing 'time' field. Skipping...");
+                    continue;
+                }
                 if (!time_.matches(dailyPattern)) {
+                    plugin.getLogger().warning("Task '" + key + "' (daily) has invalid time format: '" + time_ + "'. Expected HH:mm. Skipping...");
                     continue;
                 }
                 LocalTime time = LocalTime.parse(time_);
@@ -167,7 +196,12 @@ public class PluginConfig {
             } else if (type.equals("repeat")) {
                 // format time (minutes)
                 String time_ = taskSection.getString("interval");
+                if (time_ == null) {
+                    plugin.getLogger().warning("Task '" + key + "' (repeat) is missing 'interval' field. Skipping...");
+                    continue;
+                }
                 if (!time_.matches(repeatPattern)) {
+                    plugin.getLogger().warning("Task '" + key + "' (repeat) has invalid interval format: '" + time_ + "'. Expected integer (minutes). Skipping...");
                     continue;
                 }
                 long time = Long.parseLong(time_);
@@ -190,10 +224,14 @@ public class PluginConfig {
             } else if (type.equals("cron")) {
                 // format: cron expression (e.g., "0 0 * * *")
                 String cronExpr = taskSection.getString("cron");
+                if (cronExpr == null) {
+                    plugin.getLogger().warning("Task '" + key + "' (cron) is missing 'cron' field. Skipping...");
+                    continue;
+                }
                 try {
                     cronParser.parse(cronExpr);
                 } catch (Exception e) {
-                    plugin.getLogger().warning("Invalid cron expression for task " + key + ": " + cronExpr);
+                    plugin.getLogger().warning("Task '" + key + "' (cron) has invalid cron expression: '" + cronExpr + "'. " + e.getMessage() + ". Skipping...");
                     continue;
                 }
                 ScheduleTask task = new ScheduleTask(
@@ -347,6 +385,7 @@ public class PluginConfig {
         try {
             scheduler.save(new File(plugin.getDataFolder(), "schedule.yml"));
         } catch (Exception e) {
+            plugin.getLogger().severe("Failed to save schedule.yml: " + e.getMessage());
             e.printStackTrace();
         }
     }

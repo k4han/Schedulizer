@@ -8,11 +8,53 @@ permissions:
   schedulizer.use:
     description: "Allows access to Schedulizer commands"
     default: op
+    children:
+      schedulizer.command.help: true
+      schedulizer.command.list: true
+      schedulizer.command.reload: true
+      schedulizer.command.add: true
+      schedulizer.command.remove: true
+      schedulizer.command.time: true
+      schedulizer.command.status: true
+      schedulizer.command.cmd: true
+      schedulizer.command.info: true
+      schedulizer.command.execute: true
+
+  schedulizer.command.help:
+    description: "Allows access to the help command"
+    default: op
+  schedulizer.command.list:
+    description: "Allows access to the list command"
+    default: op
+  schedulizer.command.reload:
+    description: "Allows access to the reload command"
+    default: op
+  schedulizer.command.add:
+    description: "Allows access to the add command"
+    default: op
+  schedulizer.command.remove:
+    description: "Allows access to the remove command"
+    default: op
+  schedulizer.command.time:
+    description: "Allows access to the time command"
+    default: op
+  schedulizer.command.status:
+    description: "Allows access to the status command"
+    default: op
+  schedulizer.command.cmd:
+    description: "Allows access to the cmd command"
+    default: op
+  schedulizer.command.info:
+    description: "Allows access to the info command"
+    default: op
+  schedulizer.command.execute:
+    description: "Allows access to the execute command"
+    default: op
 
 commands:
   Schedulizer:
-    description: "This is a command"
-    usage: "/Schedulizer"
-    aliases: [ Schedulizer ]
+    description: "Main Schedulizer command"
+    usage: "/Schedulizer [help|list|reload|add|remove|time|status|cmd|info|execute]"
+    aliases: [ schedulizer, sched ]
     permission: schedulizer.use
-    permission-message: "You do not have permission to use this command"
+    permission-message: "&cYou do not have permission to use this command."
