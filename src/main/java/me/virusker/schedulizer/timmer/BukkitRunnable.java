@@ -45,7 +45,7 @@ public class BukkitRunnable extends org.bukkit.scheduler.BukkitRunnable {
 
             if (!task.isEnabled()) continue;
 
-            String taskKey = task.getName() + ":" + currentTime.getMinute();
+            String taskKey = task.getName() + ":" + totalMinutes;
             if (executedTasks.contains(taskKey)) continue;
 
             if (task.getType().equals("repeat")) {
@@ -53,25 +53,27 @@ public class BukkitRunnable extends org.bukkit.scheduler.BukkitRunnable {
                 long interval = task.getInterval();
                 long minutesSinceStart = totalMinutes - task.getStartMinutes();
                 if (minutesSinceStart >= 0 && minutesSinceStart % interval == 0) {
+                    executedTasks.add(taskKey);
 
                     for (String command : task.getCommand()) {
                         config.getPlugin().getServer().dispatchCommand(config.getPlugin().getServer().getConsoleSender(), command);
                     }
-                    executedTasks.add(taskKey);
                 }
             } else if (task.getType().equals("daily") &&
                     task.getDailyTime().getHour() == currentTime.getHour() &&
                     task.getDailyTime().getMinute() == currentTime.getMinute()) {
 
+                executedTasks.add(taskKey);
+
                 for (String command : task.getCommand()) {
                     config.getPlugin().getServer().dispatchCommand(config.getPlugin().getServer().getConsoleSender(), command);
                 }
-                // task executed this minute
-                executedTasks.add(taskKey);
             } else if (task.getType().equals("once") &&
                     task.getExecutionTime().getHour() == currentTime.getHour() &&
                     task.getExecutionTime().getMinute() == currentTime.getMinute()) {
 //                    config.getPlugin().getLogger().info("Executing command: " + task.getCommand());
+                executedTasks.add(taskKey);
+
                 for (String command : task.getCommand()) {
                     config.getPlugin().getServer().dispatchCommand(config.getPlugin().getServer().getConsoleSender(), command);
                 }
@@ -84,13 +86,14 @@ public class BukkitRunnable extends org.bukkit.scheduler.BukkitRunnable {
                     CronParser cronParser = new CronParser(CronDefinitionBuilder.instanceDefinitionFor(com.cronutils.model.CronType.UNIX));
                     Cron cron = cronParser.parse(task.getCronExpression());
                     ExecutionTime executionTime = ExecutionTime.forCron(cron);
-                    
+
                     // Check if current time is an execution time
                     if (executionTime.isMatch(now)) {
+                        executedTasks.add(taskKey);
+
                         for (String command : task.getCommand()) {
                             config.getPlugin().getServer().dispatchCommand(config.getPlugin().getServer().getConsoleSender(), command);
                         }
-                        executedTasks.add(taskKey);
                     }
                 } catch (Exception e) {
                     config.getPlugin().getLogger().warning("Error executing cron task " + task.getName() + ": " + e.getMessage());
