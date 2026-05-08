@@ -5,7 +5,7 @@ schedules:
   first_time_event:
     enabled: true
     type: "once"
-    time: "2025-02-08 15:30:00" # YYYY-MM-DD HH:MM:SS
+    time: "08/02/2025 15:30" # dd/MM/yyyy HH:mm
     command:
     - "say one time event!"
     - "say Welcome first time!"
@@ -14,7 +14,7 @@ schedules:
   daily_reset:
     enabled: true
     type: "daily"
-    time: "12:00:00" # HH:MM:SS
+    time: "12:00" # HH:mm
     command:
     - "say new Daily!"
 

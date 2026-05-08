@@ -9,40 +9,39 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class StatusCommand extends BaseCommand {
-    private static final List<String> VALID_STATUS = List.of("true", "false", "1", "0", "enable", "disable", "on", "off");
-    
+    private static final java.util.Set<String> ENABLING = java.util.Set.of("true", "1", "enable", "on");
+    private static final java.util.Set<String> DISABLING = java.util.Set.of("false", "0", "disable", "off");
+
     public StatusCommand(PluginConfig pluginConfig) {
         super(pluginConfig);
     }
 
     @Override
     public boolean execute(CommandSender sender, String[] args) {
-        if (args.length < 3) {
+        if (args.length < 2) {
             sendMessage(sender, "Usage: " + getUsage());
             return false;
         }
 
-        String name = args[1];
-        String statusArg = args[2].toLowerCase();
-        
-        ScheduleTask task = pluginConfig.getTask(name);
-        if (task == null) {
-            sendMessage(sender, "Task '&e" + name + "&c' not found!");
-            return false;
-        }
+        String name = args[0];
+        String statusArg = args[1].toLowerCase();
+
+        ScheduleTask task = getTaskOrFail(sender, name);
+        if (task == null) return false;
 
         boolean status;
-        if (statusArg.equals("true") || statusArg.equals("1") || statusArg.equals("enable") || statusArg.equals("on")) {
+        if (ENABLING.contains(statusArg)) {
             status = true;
-        } else if (statusArg.equals("false") || statusArg.equals("0") || statusArg.equals("disable") || statusArg.equals("off")) {
+        } else if (DISABLING.contains(statusArg)) {
             status = false;
         } else {
             sendMessage(sender, "Invalid status '&e" + statusArg + "&c'. Valid values: &etrue, false, 1, 0, enable, disable, on, off");
             return false;
         }
 
-        pluginConfig.updateStatus(name, status);
-        
+        pluginConfig.setTaskEnabled(name, status);
+        task.setEnabled(status);
+
         String statusText = status ? "&aActive" : "&cDisabled";
         sendSuccess(sender, "Task '&e" + name + "&a' status set to: " + statusText);
         
@@ -51,12 +50,12 @@ public class StatusCommand extends BaseCommand {
 
     @Override
     public List<String> getCompletions(CommandSender sender, String[] args) {
-        if (args.length == 2) {
-            return getTaskCompletions(sender, args[1]);
-        } else if (args.length == 3) {
-            return filterByPartial(List.of("true", "false"), args[2]);
+        if (args.length == 1) {
+            return getTaskCompletions(sender, args[0]);
+        } else if (args.length == 2) {
+            return filterByPartial(List.of("true", "false"), args[1]);
         }
-        return new ArrayList<>();
+        return EMPTY_COMPLETIONS;
     }
 
     @Override

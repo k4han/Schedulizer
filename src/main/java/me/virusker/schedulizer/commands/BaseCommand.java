@@ -1,7 +1,9 @@
 package me.virusker.schedulizer.commands;
 
 import me.virusker.schedulizer.config.PluginConfig;
-import org.bukkit.ChatColor;
+import me.virusker.schedulizer.models.ScheduleTask;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import org.bukkit.command.CommandSender;
 
 import java.util.ArrayList;
@@ -9,6 +11,9 @@ import java.util.List;
 
 public abstract class BaseCommand implements CommandHandler {
     protected final PluginConfig pluginConfig;
+
+    /** Shared empty list for tab completion fallback - avoids repeated allocations */
+    protected static final List<String> EMPTY_COMPLETIONS = List.of();
 
     public BaseCommand(PluginConfig pluginConfig) {
         this.pluginConfig = pluginConfig;
@@ -32,10 +37,10 @@ public abstract class BaseCommand implements CommandHandler {
     public abstract String getDescription();
 
     /**
-     * Send error message to sender
+     * Send a message to sender without automatic color prefix
      */
     protected void sendMessage(CommandSender sender, String message) {
-        sender.sendMessage(colorize("&c" + message));
+        sender.sendMessage(colorize(message));
     }
 
     /**
@@ -60,10 +65,11 @@ public abstract class BaseCommand implements CommandHandler {
     }
 
     /**
-     * Colorize a message
+     * Colorize a message using Adventure API.
+     * Converts legacy '&' color codes to Adventure Components.
      */
-    protected String colorize(String message) {
-        return ChatColor.translateAlternateColorCodes('&', message);
+    public static Component colorize(String message) {
+        return LegacyComponentSerializer.legacyAmpersand().deserialize(message);
     }
 
     /**
@@ -106,5 +112,32 @@ public abstract class BaseCommand implements CommandHandler {
                 .filter(s -> s.toLowerCase().startsWith(partial.toLowerCase()))
                 .forEach(completions::add);
         return completions;
+    }
+
+    /**
+     * Get a task by name, sending an error message if not found.
+     * Returns null if the task does not exist (caller should return false).
+     */
+    protected ScheduleTask getTaskOrFail(CommandSender sender, String name) {
+        ScheduleTask task = pluginConfig.getTask(name);
+        if (task == null) {
+            sendMessage(sender, "Task '&e" + name + "&c' not found!");
+        }
+        return task;
+    }
+
+    /**
+     * Get the status label for a task (for display in list/info commands).
+     */
+    protected String getStatusLabel(boolean enabled) {
+        return enabled ? "&a[ACTIVE]" : "&c[DISABLED]";
+    }
+
+    /**
+     * Default implementation returns empty list for tab completion.
+     */
+    @Override
+    public List<String> getCompletions(CommandSender sender, String[] args) {
+        return EMPTY_COMPLETIONS;
     }
 }

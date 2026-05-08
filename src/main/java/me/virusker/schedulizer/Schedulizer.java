@@ -8,27 +8,41 @@ import org.bukkit.plugin.java.JavaPlugin;
 
 public final class Schedulizer extends JavaPlugin {
 
+    private BukkitRunnable schedulerTask;
+    private PluginConfig pluginConfig;
+    private Metrics metrics;
+
     @Override
     public void onEnable() {
 
         int pluginId = 24886;
-        Metrics metrics = new Metrics(this, pluginId);
+        this.metrics = new Metrics(this, pluginId);
 
         // Plugin startup logic
         saveDefaultConfig();
 
-        PluginConfig pluginConfig = new PluginConfig(this);
+        pluginConfig = new PluginConfig(this);
 
         // register the command
         getCommand("Schedulizer").setExecutor(new ScheduleCommand(pluginConfig));
 
-        new BukkitRunnable(pluginConfig).runTaskTimer(this, 100, pluginConfig.getTick());
+        schedulerTask = new BukkitRunnable(pluginConfig);
+        schedulerTask.runTaskTimer(this, 100, pluginConfig.getTick());
 
 
     }
 
     @Override
     public void onDisable() {
-        // Plugin shutdown logic
+        // Cancel scheduled task to prevent further execution
+        if (schedulerTask != null) {
+            schedulerTask.cancel();
+            getLogger().info("Scheduler task cancelled.");
+        }
+
+        // Save configuration on shutdown
+        if (pluginConfig != null) {
+            pluginConfig.saveConfig();
+        }
     }
 }

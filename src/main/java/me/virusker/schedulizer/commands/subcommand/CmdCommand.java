@@ -17,20 +17,17 @@ public class CmdCommand extends BaseCommand {
 
     @Override
     public boolean execute(CommandSender sender, String[] args) {
-        if (args.length < 3) {
+        if (args.length < 2) {
             sendMessage(sender, "Usage: " + getUsage());
             return false;
         }
 
-        String name = args[1];
-        String commandStr = String.join(" ", Arrays.copyOfRange(args, 2, args.length));
+        String name = args[0];
+        String commandStr = String.join(" ", Arrays.copyOfRange(args, 1, args.length));
         List<String> commands = Arrays.asList(commandStr.split(";\\s*"));
-        
-        ScheduleTask task = pluginConfig.getTask(name);
-        if (task == null) {
-            sendMessage(sender, "Task '&e" + name + "&c' not found!");
-            return false;
-        }
+
+        ScheduleTask task = getTaskOrFail(sender, name);
+        if (task == null) return false;
 
         if (commands.isEmpty() || commands.get(0).isEmpty()) {
             sendMessage(sender, "Commands cannot be empty!");
@@ -47,8 +44,8 @@ public class CmdCommand extends BaseCommand {
 
     @Override
     public List<String> getCompletions(CommandSender sender, String[] args) {
-        if (args.length == 2) {
-            return getTaskCompletions(sender, args[1]);
+        if (args.length == 1) {
+            return getTaskCompletions(sender, args[0]);
         }
         return new ArrayList<>();
     }

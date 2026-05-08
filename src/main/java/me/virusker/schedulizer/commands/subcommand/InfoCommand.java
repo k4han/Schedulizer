@@ -5,42 +5,37 @@ import me.virusker.schedulizer.config.PluginConfig;
 import me.virusker.schedulizer.models.ScheduleTask;
 import org.bukkit.command.CommandSender;
 
-import java.util.ArrayList;
 import java.util.List;
 
 public class InfoCommand extends BaseCommand {
-    
+
     public InfoCommand(PluginConfig pluginConfig) {
         super(pluginConfig);
     }
 
     @Override
     public boolean execute(CommandSender sender, String[] args) {
-        if (args.length < 2) {
+        if (args.length < 1) {
             sendMessage(sender, "Usage: " + getUsage());
             return false;
         }
 
-        String name = args[1];
-        ScheduleTask task = pluginConfig.getTask(name);
-
-        if (task == null) {
-            sendMessage(sender, "Task '&e" + name + "&c' not found!");
-            return false;
-        }
+        String name = args[0];
+        ScheduleTask task = getTaskOrFail(sender, name);
+        if (task == null) return false;
 
         sendInfo(sender, "&6=== Task Info: &e" + task.getName() + " &6===");
         sender.sendMessage(colorize(String.format(
             "  &fStatus: %s",
-            task.isEnabled() ? "&aActive" : "&cDisabled"
+            getStatusLabel(task.isEnabled())
         )));
         sender.sendMessage(colorize(String.format(
             "  &fType: &e%s",
-            task.getType().toUpperCase()
+            task.getType().getValue().toUpperCase()
         )));
         sender.sendMessage(colorize(String.format(
             "  &fTime: &e%s",
-            getTimeInfo(task)
+            task.getTimeDisplay(pluginConfig.getFormatter())
         )));
         sender.sendMessage(colorize("  &fCommands:"));
         for (String cmd : task.getCommand()) {
@@ -50,32 +45,17 @@ public class InfoCommand extends BaseCommand {
         return true;
     }
 
-    private String getTimeInfo(ScheduleTask task) {
-        switch (task.getType()) {
-            case "once":
-                return task.getExecutionTime().format(pluginConfig.getFormatter());
-            case "daily":
-                return task.getDailyTime().toString();
-            case "repeat":
-                return task.getInterval() + " minutes (start offset: " + task.getStartMinutes() + " min)";
-            case "cron":
-                return task.getCronExpression();
-            default:
-                return "Unknown";
-        }
+    @Override
+    public String getName() {
+        return "info";
     }
 
     @Override
     public List<String> getCompletions(CommandSender sender, String[] args) {
-        if (args.length == 2) {
-            return getTaskCompletions(sender, args[1]);
+        if (args.length == 1) {
+            return getTaskCompletions(sender, args[0]);
         }
-        return new ArrayList<>();
-    }
-
-    @Override
-    public String getName() {
-        return "info";
+        return EMPTY_COMPLETIONS;
     }
 
     @Override

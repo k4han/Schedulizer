@@ -1,5 +1,5 @@
 name: Schedulizer
-version: '1.0'
+version: '${version}'
 main: me.virusker.schedulizer.Schedulizer
 author: Kh4n
 api-version: '1.21'
@@ -14,7 +14,6 @@ permissions:
       schedulizer.command.reload: true
       schedulizer.command.add: true
       schedulizer.command.remove: true
-      schedulizer.command.time: true
       schedulizer.command.status: true
       schedulizer.command.cmd: true
       schedulizer.command.info: true
@@ -35,9 +34,6 @@ permissions:
   schedulizer.command.remove:
     description: "Allows access to the remove command"
     default: op
-  schedulizer.command.time:
-    description: "Allows access to the time command"
-    default: op
   schedulizer.command.status:
     description: "Allows access to the status command"
     default: op
@@ -54,7 +50,7 @@ permissions:
 commands:
   Schedulizer:
     description: "Main Schedulizer command"
-    usage: "/Schedulizer [help|list|reload|add|remove|time|status|cmd|info|execute]"
+    usage: "/Schedulizer [help|list|reload|add|remove|status|cmd|info|execute]"
     aliases: [ schedulizer, sched ]
     permission: schedulizer.use
     permission-message: "&cYou do not have permission to use this command."

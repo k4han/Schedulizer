@@ -6,8 +6,6 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.configuration.InvalidConfigurationException;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
 
 public class ReloadCommand extends BaseCommand {
     
@@ -27,11 +25,6 @@ public class ReloadCommand extends BaseCommand {
             return false;
         }
         return true;
-    }
-
-    @Override
-    public List<String> getCompletions(CommandSender sender, String[] args) {
-        return new ArrayList<>();
     }
 
     @Override

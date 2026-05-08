@@ -1,9 +1,10 @@
 plugins {
     id 'java'
+    id 'com.github.johnrengelman.shadow' version '8.1.1'
 }
 
 group = 'io.github.virusker.schedulizer'
-version = '1.1'
+version = '1.2'
 
 repositories {
     mavenCentral()
@@ -49,12 +50,15 @@ tasks.withType(JavaCompile).configureEach {
 //        attributes["paperweight-mappings-namespace"] = "mojang"
 //    }
 //}
-//// if you have shadowJar configured
-//tasks.shadowJar {
-//    manifest {
-//        attributes["paperweight-mappings-namespace"] = "mojang"
-//    }
-//}
+tasks.shadowJar {
+    archiveBaseName.set("Schedulizer")
+    archiveVersion.set(version)
+    archiveClassifier.set("")
+}
+
+tasks.build {
+    dependsOn shadowJar
+}
 
 processResources {
     def props = [version: version]

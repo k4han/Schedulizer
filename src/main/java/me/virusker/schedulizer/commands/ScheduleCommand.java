@@ -23,7 +23,6 @@ public class ScheduleCommand implements TabExecutor {
         registerSubCommand(new ReloadCommand(pluginConfig));
         registerSubCommand(new AddCommand(pluginConfig));
         registerSubCommand(new RemoveCommand(pluginConfig));
-        registerSubCommand(new TimeCommand(pluginConfig));
         registerSubCommand(new StatusCommand(pluginConfig));
         registerSubCommand(new CmdCommand(pluginConfig));
         registerSubCommand(new InfoCommand(pluginConfig));
@@ -38,7 +37,7 @@ public class ScheduleCommand implements TabExecutor {
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         // Check base permission
         if (!sender.hasPermission("schedulizer.use")) {
-            sender.sendMessage("&cYou do not have permission to use this command.");
+            sender.sendMessage(BaseCommand.colorize("&cYou do not have permission to use this command."));
             return true;
         }
 
@@ -53,8 +52,8 @@ public class ScheduleCommand implements TabExecutor {
 
         // Unknown sub-command
         if (subCommand == null) {
-            sender.sendMessage("&cUnknown command: &e" + subCommandName);
-            sender.sendMessage("&7Use &e/Schedulizer help &7to see available commands.");
+            sender.sendMessage(BaseCommand.colorize("&cUnknown command: &e" + subCommandName));
+            sender.sendMessage(BaseCommand.colorize("&7Use &e/Schedulizer help &7to see available commands."));
             return true;
         }
 
@@ -65,7 +64,7 @@ public class ScheduleCommand implements TabExecutor {
 
         // Check minimum arguments
         if (args.length - 1 < subCommand.getMinArgs()) {
-            sender.sendMessage("&cUsage: " + subCommand.getUsage());
+            sender.sendMessage(BaseCommand.colorize("&cUsage: " + subCommand.getUsage()));
             return true;
         }
 
@@ -76,7 +75,7 @@ public class ScheduleCommand implements TabExecutor {
             pluginConfig.getPlugin().getLogger().severe(
                 "Error executing command '" + subCommand.getName() + "': " + e.getMessage()
             );
-            sender.sendMessage("&cAn error occurred while executing this command. Check console for details.");
+            sender.sendMessage(BaseCommand.colorize("&cAn error occurred while executing this command. Check console for details."));
             return false;
         }
     }
