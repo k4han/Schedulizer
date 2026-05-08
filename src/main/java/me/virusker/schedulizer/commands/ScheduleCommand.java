@@ -53,7 +53,7 @@ public class ScheduleCommand implements TabExecutor {
         // Unknown sub-command
         if (subCommand == null) {
             sender.sendMessage(BaseCommand.colorize("&cUnknown command: &e" + subCommandName));
-            sender.sendMessage(BaseCommand.colorize("&7Use &e/Schedulizer help &7to see available commands."));
+            sender.sendMessage(BaseCommand.colorize("&7Use &e/schedulizer help &7to see available commands."));
             return true;
         }
 
@@ -93,7 +93,7 @@ public class ScheduleCommand implements TabExecutor {
             String partial = args[0].toLowerCase();
             
             for (BaseCommand subCommand : subCommands.values()) {
-                if (subCommand.checkPermission(sender)) {
+                if (subCommand.hasPermission(sender)) {
                     String name = subCommand.getName().toLowerCase();
                     if (name.startsWith(partial)) {
                         completions.add(name);
@@ -108,7 +108,7 @@ public class ScheduleCommand implements TabExecutor {
         String subCommandName = args[0].toLowerCase();
         BaseCommand subCommand = subCommands.get(subCommandName);
 
-        if (subCommand != null && subCommand.checkPermission(sender)) {
+        if (subCommand != null && subCommand.hasPermission(sender)) {
             // Pass the remaining arguments to the sub-command
             String[] subArgs = Arrays.copyOfRange(args, 1, args.length);
             return subCommand.getCompletions(sender, subArgs);

@@ -24,7 +24,7 @@ public final class Schedulizer extends JavaPlugin {
         pluginConfig = new PluginConfig(this);
 
         // register the command
-        getCommand("Schedulizer").setExecutor(new ScheduleCommand(pluginConfig));
+        getCommand("schedulizer").setExecutor(new ScheduleCommand(pluginConfig));
 
         schedulerTask = new BukkitRunnable(pluginConfig);
         schedulerTask.runTaskTimer(this, 100, pluginConfig.getTick());

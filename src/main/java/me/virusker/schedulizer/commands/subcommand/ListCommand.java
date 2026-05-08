@@ -19,7 +19,7 @@ public class ListCommand extends BaseCommand {
         List<ScheduleTask> tasks = pluginConfig.getTasks();
 
         if (tasks.isEmpty()) {
-            sendInfo(sender, "No tasks found. Use /Schedulizer help to see available commands.");
+            sendInfo(sender, "No tasks found. Use /schedulizer help to see available commands.");
             return true;
         }
 
@@ -51,6 +51,6 @@ public class ListCommand extends BaseCommand {
 
     @Override
     public String getUsage() {
-        return "/Schedulizer list";
+        return "/schedulizer list";
     }
 }

@@ -2,8 +2,7 @@ package me.virusker.schedulizer.commands;
 
 import me.virusker.schedulizer.config.PluginConfig;
 import me.virusker.schedulizer.models.ScheduleTask;
-import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
+import org.bukkit.ChatColor;
 import org.bukkit.command.CommandSender;
 
 import java.util.ArrayList;
@@ -65,11 +64,11 @@ public abstract class BaseCommand implements CommandHandler {
     }
 
     /**
-     * Colorize a message using Adventure API.
-     * Converts legacy '&' color codes to Adventure Components.
+     * Colorize a message.
+     * Converts legacy '&' color codes to Minecraft color codes.
      */
-    public static Component colorize(String message) {
-        return LegacyComponentSerializer.legacyAmpersand().deserialize(message);
+    public static String colorize(String message) {
+        return ChatColor.translateAlternateColorCodes('&', message);
     }
 
     /**

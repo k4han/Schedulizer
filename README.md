@@ -4,13 +4,13 @@
 
 ## Features
 
-- :white_check_mark: **Once**: Execute once at a specified time
-- :white_check_mark: **Daily**: Execute daily at a specified time
-- :white_check_mark: **Repeat**: Execute repeatedly at intervals (minutes)
-- :white_check_mark: **Cron**: Support for flexible UNIX cron expressions
-- :white_check_mark: Easy configuration via YAML files
-- :white_check_mark: Custom timezone support
-- :white_check_mark: Complete command management
+- ✅ **Once**: Execute once at a specified time
+- ✅ **Daily**: Execute daily at a specified time
+- ✅ **Repeat**: Execute repeatedly at intervals (minutes)
+- ✅ **Cron**: Support for flexible UNIX cron expressions
+- ✅ Easy configuration via YAML files
+- ✅ Custom timezone support
+- ✅ Complete command management
 
 ## Requirements
 

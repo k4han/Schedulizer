@@ -39,6 +39,6 @@ public class ReloadCommand extends BaseCommand {
 
     @Override
     public String getUsage() {
-        return "/Schedulizer reload";
+        return "/schedulizer reload";
     }
 }

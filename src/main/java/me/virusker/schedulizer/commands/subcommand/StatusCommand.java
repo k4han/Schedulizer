@@ -5,7 +5,6 @@ import me.virusker.schedulizer.config.PluginConfig;
 import me.virusker.schedulizer.models.ScheduleTask;
 import org.bukkit.command.CommandSender;
 
-import java.util.ArrayList;
 import java.util.List;
 
 public class StatusCommand extends BaseCommand {
@@ -39,8 +38,7 @@ public class StatusCommand extends BaseCommand {
             return false;
         }
 
-        pluginConfig.setTaskEnabled(name, status);
-        task.setEnabled(status);
+        pluginConfig.updateStatus(name, status);
 
         String statusText = status ? "&aActive" : "&cDisabled";
         sendSuccess(sender, "Task '&e" + name + "&a' status set to: " + statusText);
@@ -75,6 +73,6 @@ public class StatusCommand extends BaseCommand {
 
     @Override
     public String getUsage() {
-        return "/Schedulizer status <name> <true|false>";
+        return "/schedulizer status <name> <true|false>";
     }
 }

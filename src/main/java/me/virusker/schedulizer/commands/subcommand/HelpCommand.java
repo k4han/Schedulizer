@@ -16,15 +16,15 @@ public class HelpCommand extends BaseCommand {
     @Override
     public boolean execute(CommandSender sender, String[] args) {
         sendInfo(sender, "&6=== Schedulizer Help ===");
-        sender.sendMessage(colorize("&e/Schedulizer list &7- List all tasks"));
-        sender.sendMessage(colorize("&e/Schedulizer help &7- Show this help"));
-        sender.sendMessage(colorize("&e/Schedulizer reload &7- Reload configuration"));
-        sender.sendMessage(colorize("&e/Schedulizer add <name> <type> <time...> <command> &7- Add a new task"));
-        sender.sendMessage(colorize("&e/Schedulizer remove &7- Remove a task"));
-        sender.sendMessage(colorize("&e/Schedulizer status &7- Toggle task status"));
-        sender.sendMessage(colorize("&e/Schedulizer cmd &7- Update task commands"));
-        sender.sendMessage(colorize("&e/Schedulizer info &7- View task details"));
-        sender.sendMessage(colorize("&e/Schedulizer execute &7- Force execute a task"));
+        sender.sendMessage(colorize("&e/schedulizer list &7- List all tasks"));
+        sender.sendMessage(colorize("&e/schedulizer help &7- Show this help"));
+        sender.sendMessage(colorize("&e/schedulizer reload &7- Reload configuration"));
+        sender.sendMessage(colorize("&e/schedulizer add <name> <type> <time...> <command> &7- Add a new task"));
+        sender.sendMessage(colorize("&e/schedulizer remove &7- Remove a task"));
+        sender.sendMessage(colorize("&e/schedulizer status &7- Toggle task status"));
+        sender.sendMessage(colorize("&e/schedulizer cmd &7- Update task commands"));
+        sender.sendMessage(colorize("&e/schedulizer info &7- View task details"));
+        sender.sendMessage(colorize("&e/schedulizer execute &7- Force execute a task"));
         sender.sendMessage("");
         sender.sendMessage(colorize("&7Task types: &fonce, daily, repeat, cron"));
         sender.sendMessage(colorize("&7Time format: &fdd/MM/yyyy HH:mm (once), HH:mm (daily), minutes (repeat), UNIX cron (cron)"));
@@ -44,6 +44,6 @@ public class HelpCommand extends BaseCommand {
 
     @Override
     public String getUsage() {
-        return "/Schedulizer help";
+        return "/schedulizer help";
     }
 }

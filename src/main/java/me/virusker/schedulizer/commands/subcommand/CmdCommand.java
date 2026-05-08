@@ -67,6 +67,6 @@ public class CmdCommand extends BaseCommand {
 
     @Override
     public String getUsage() {
-        return "/Schedulizer cmd <name> <command1; command2; ...>";
+        return "/schedulizer cmd <name> <command1; command2; ...>";
     }
 }

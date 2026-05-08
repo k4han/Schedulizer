@@ -70,6 +70,6 @@ public class InfoCommand extends BaseCommand {
 
     @Override
     public String getUsage() {
-        return "/Schedulizer info <name>";
+        return "/schedulizer info <name>";
     }
 }

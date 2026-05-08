@@ -59,6 +59,6 @@ public class ExecuteCommand extends BaseCommand {
 
     @Override
     public String getUsage() {
-        return "/Schedulizer execute <name>";
+        return "/schedulizer execute <name>";
     }
 }

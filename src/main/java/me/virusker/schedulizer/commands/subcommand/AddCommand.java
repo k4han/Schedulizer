@@ -31,9 +31,9 @@ public class AddCommand extends BaseCommand {
         if (args.length < 2) {
             sendMessage(sender, "Usage: " + getUsage());
             sendMessage(sender, "Examples:");
-            sendMessage(sender, "- /Schedulizer add myTask daily 10:30 broadcast; Hello World!");
-            sendMessage(sender, "- /Schedulizer add myCron cron 0 0 * * * broadcast; Midnight!");
-            sendMessage(sender, "- /Schedulizer add myOnce once 18/03/2026 20:00 broadcast; Event!");
+            sendMessage(sender, "- /schedulizer add myTask daily 10:30 broadcast Hello World!");
+            sendMessage(sender, "- /schedulizer add myCron cron 0 0 * * * broadcast Midnight!");
+            sendMessage(sender, "- /schedulizer add myOnce once 18/03/2026 20:00 broadcast Event!");
             return false;
         }
 
@@ -55,8 +55,8 @@ public class AddCommand extends BaseCommand {
                 // UNIX cron: minute hour day month weekday
                 // /Schedulizer add <name> cron <minute> <hour> <day> <month> <weekday> <command...>
                 if (args.length < 7) {
-                    sendMessage(sender, "Usage: &e/Schedulizer add <name> cron <minute> <hour> <day> <month> <weekday> <command> [command2; ...]");
-                    sendMessage(sender, "Example: &e/Schedulizer add myCron cron 0 0 * * * broadcast; Midnight!");
+                    sendMessage(sender, "Usage: &e/schedulizer add <name> cron <minute> <hour> <day> <month> <weekday> <command> [command2; ...]");
+                    sendMessage(sender, "Example: &e/schedulizer add myCron cron 0 0 * * * broadcast Midnight!");
                     return false;
                 }
                 time = String.join(" ", Arrays.copyOfRange(args, 2, 7));
@@ -84,14 +84,14 @@ public class AddCommand extends BaseCommand {
                     sendMessage(sender, "Invalid time format for 'once' type.");
                     sendMessage(sender, "Expected format: &e" + pluginConfig.getDateTimeFormat());
                     sendMessage(sender, "Example: &e18/03/2026 20:00");
-                    sendMessage(sender, "Usage: &e/Schedulizer add <name> once <date_time...> <command> [command2; ...]");
+                    sendMessage(sender, "Usage: &e/schedulizer add <name> once <date_time...> <command> [command2; ...]");
                     return false;
                 }
                 break;
             default:
                 if (args.length < 4) {
                     sendMessage(sender, "Usage: " + getUsage());
-                    sendMessage(sender, "Example: /Schedulizer add myTask daily 10:30 broadcast; Hello World!");
+                    sendMessage(sender, "Example: /schedulizer add myTask daily 10:30 broadcast Hello World!");
                     return false;
                 }
                 time = args[2];
@@ -257,6 +257,6 @@ public class AddCommand extends BaseCommand {
 
     @Override
     public String getUsage() {
-        return "/Schedulizer add <name> <type> <time...> <command> [command2; ...]";
+        return "/schedulizer add <name> <type> <time...> <command> [command2; ...]";
     }
 }

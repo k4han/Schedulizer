@@ -1,45 +1,32 @@
-
-# supported types: once, daily, repeat, cron
 schedules:
-  # One time event
+  # One-time task
   first_time_event:
     enabled: true
     type: "once"
     time: "08/02/2025 15:30" # dd/MM/yyyy HH:mm
     command:
-    - "say one time event!"
-    - "say Welcome first time!"
+    - "say One time event!"
 
-  # Daily time event
+  # Daily task
   daily_reset:
     enabled: true
     type: "daily"
     time: "12:00" # HH:mm
     command:
-    - "say new Daily!"
+    - "say New daily!"
 
-  # Repeating event
+  # Repeating task
   repeating_event:
     enabled: true
     type: "repeat"
     interval: 5  # minute
-    # start_minutes: 0  # Optional: offset in minutes (0 = :00, 3 = :03, 7 = :07...)
     command:
     - "say Repeating!"
 
-      # https://crontab.guru/ - Use this link to generate cron expressions easily
-  # Cron-based event (UNIX cron format: minute hour day month weekday)
+  # Cron task
   cron_event:
     enabled: true
     type: "cron"
-    cron: "0 0 * * *"  # Every day at midnight
+    cron: "0 0 * * *"  # Every day at 00:00
     command:
-    - "say Cron event triggered!"
-
-  # Another cron example: every 15 minutes
-  cron_15min:
-    enabled: false
-    type: "cron"
-    cron: "*/15 * * * *"  # Every 15 minutes
-    command:
-    - "say 15 minutes passed!"
+    - "say Cron event!"

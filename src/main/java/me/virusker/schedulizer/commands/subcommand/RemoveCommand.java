@@ -47,6 +47,6 @@ public class RemoveCommand extends BaseCommand {
 
     @Override
     public String getUsage() {
-        return "/Schedulizer remove <name>";
+        return "/schedulizer remove <name>";
     }
 }

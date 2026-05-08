@@ -48,9 +48,9 @@ permissions:
     default: op
 
 commands:
-  Schedulizer:
+  schedulizer:
     description: "Main Schedulizer command"
-    usage: "/Schedulizer [help|list|reload|add|remove|status|cmd|info|execute]"
-    aliases: [ schedulizer, sched ]
+    usage: "/schedulizer [help|list|reload|add|remove|status|cmd|info|execute]"
+    aliases: [ sched ]
     permission: schedulizer.use
     permission-message: "&cYou do not have permission to use this command."

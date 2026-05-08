@@ -71,6 +71,7 @@ public class BukkitRunnable extends org.bukkit.scheduler.BukkitRunnable {
                 config.executeCommands(task.getCommand());
             } else if (type == TaskType.ONCE &&
                     task.getExecutionTime() != null &&
+                    task.getExecutionTime().toLocalDate().equals(currentDate) &&
                     task.getExecutionTime().getHour() == currentTime.getHour() &&
                     task.getExecutionTime().getMinute() == currentTime.getMinute()) {
                 executedTasks.add(taskKey);
