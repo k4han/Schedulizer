@@ -3,12 +3,16 @@ package me.virusker.schedulizer;
 import me.virusker.schedulizer.commands.ScheduleCommand;
 import me.virusker.schedulizer.config.PluginConfig;
 import me.virusker.schedulizer.metrics.Metrics;
-import me.virusker.schedulizer.timmer.BukkitRunnable;
+import me.virusker.schedulizer.scheduler.PlatformScheduler;
+import me.virusker.schedulizer.scheduler.PlatformSchedulerFactory;
+import me.virusker.schedulizer.scheduler.PlatformTask;
+import me.virusker.schedulizer.timmer.ScheduleTicker;
 import org.bukkit.plugin.java.JavaPlugin;
 
 public final class Schedulizer extends JavaPlugin {
 
-    private BukkitRunnable schedulerTask;
+    private PlatformTask schedulerTask;
+    private PlatformScheduler platformScheduler;
     private PluginConfig pluginConfig;
     private Metrics metrics;
 
@@ -21,13 +25,15 @@ public final class Schedulizer extends JavaPlugin {
         // Plugin startup logic
         saveDefaultConfig();
 
-        pluginConfig = new PluginConfig(this);
+        platformScheduler = PlatformSchedulerFactory.create(this);
+        getLogger().info("Using " + platformScheduler.getName() + " scheduler.");
+
+        pluginConfig = new PluginConfig(this, platformScheduler);
 
         // register the command
         getCommand("schedulizer").setExecutor(new ScheduleCommand(pluginConfig));
 
-        schedulerTask = new BukkitRunnable(pluginConfig);
-        schedulerTask.runTaskTimer(this, 100, pluginConfig.getTick());
+        schedulerTask = platformScheduler.runRepeating(new ScheduleTicker(pluginConfig), 100, pluginConfig.getTick());
 
 
     }
@@ -38,6 +44,10 @@ public final class Schedulizer extends JavaPlugin {
         if (schedulerTask != null) {
             schedulerTask.cancel();
             getLogger().info("Scheduler task cancelled.");
+        }
+
+        if (metrics != null) {
+            metrics.shutdown();
         }
 
         // Save configuration on shutdown

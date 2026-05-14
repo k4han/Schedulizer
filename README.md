@@ -1,6 +1,6 @@
 # Schedulizer
 
-**Schedulizer** is a Minecraft Paper/Spigot plugin that allows you to schedule and automatically execute in-game commands with flexible scheduling options.
+**Schedulizer** is a Minecraft Paper/Purpur/Folia plugin that allows you to schedule and automatically execute in-game commands with flexible scheduling options.
 
 ## Features
 
@@ -14,8 +14,10 @@
 
 ## Requirements
 
-- **Server**: Paper/Spigot 1.21+
+- **Server**: Paper/Purpur/Folia 1.21+
 - **Java**: 21+
+
+Note: Scheduled commands are dispatched through the server console. On Folia, Schedulizer uses the global region scheduler; the commands or plugins you run still need to be safe for the target server platform.
 
 ## Installation
 

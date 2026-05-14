@@ -6,6 +6,7 @@ import com.cronutils.model.definition.CronDefinitionBuilder;
 import com.cronutils.parser.CronParser;
 import me.virusker.schedulizer.models.ScheduleTask;
 import me.virusker.schedulizer.models.TaskType;
+import me.virusker.schedulizer.scheduler.PlatformScheduler;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.InvalidConfigurationException;
 import org.bukkit.configuration.file.FileConfiguration;
@@ -30,17 +31,19 @@ public class PluginConfig {
     private final FileConfiguration config;
     private final FileConfiguration scheduler;
     private final JavaPlugin plugin;
-    private List<ScheduleTask> tasks = new ArrayList<>();
-    private List<ScheduleTask> activeTasks = new CopyOnWriteArrayList<>();
-    private String dateTimeFormat;
-    private DateTimeFormatter formatter;
-    private ZoneId cachedZoneId;
+    private final PlatformScheduler platformScheduler;
+    private final Object schedulerLock = new Object();
+    private volatile List<ScheduleTask> tasks = new ArrayList<>();
+    private volatile List<ScheduleTask> activeTasks = new CopyOnWriteArrayList<>();
+    private volatile String dateTimeFormat;
+    private volatile DateTimeFormatter formatter;
+    private volatile ZoneId cachedZoneId;
 
     private static final Pattern DAILY_TIME_PATTERN = Pattern.compile("^\\d{2}:\\d{2}$");
     private static final Pattern REPEAT_PATTERN = Pattern.compile("^\\d+$");
     private final CronParser cronParser;
 
-    public PluginConfig(JavaPlugin plugin) {
+    public PluginConfig(JavaPlugin plugin, PlatformScheduler platformScheduler) {
         File file = new File(plugin.getDataFolder(), scheduleFile);
         if (!file.exists()) {
             plugin.saveResource(scheduleFile, false);
@@ -48,6 +51,7 @@ public class PluginConfig {
         this.scheduler = YamlConfiguration.loadConfiguration(file);
         this.config = plugin.getConfig();
         this.plugin = plugin;
+        this.platformScheduler = platformScheduler;
         dateTimeFormat = config.getString("datetime-format");
         if (dateTimeFormat == null || dateTimeFormat.isEmpty())
             this.formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
@@ -115,11 +119,21 @@ public class PluginConfig {
     }
 
     public void executeCommands(List<String> commands) {
-        org.bukkit.Server server = plugin.getServer();
-        org.bukkit.command.CommandSender console = server.getConsoleSender();
-        for (String command : commands) {
-            server.dispatchCommand(console, command);
+        if (commands == null || commands.isEmpty()) {
+            return;
         }
+
+        List<String> commandSnapshot = new ArrayList<>(commands);
+        platformScheduler.executeGlobal(() -> {
+            org.bukkit.Server server = plugin.getServer();
+            org.bukkit.command.CommandSender console = server.getConsoleSender();
+            for (String command : commandSnapshot) {
+                if (command == null || command.trim().isEmpty()) {
+                    continue;
+                }
+                server.dispatchCommand(console, command);
+            }
+        });
     }
 
     public ZoneId getZoneId() {
@@ -127,24 +141,33 @@ public class PluginConfig {
     }
 
     public long getTick() {
-        return config.getLong("tick");
+        return Math.max(1L, config.getLong("tick", 300L));
     }
     public void reload() throws IOException, InvalidConfigurationException {
-        // Reload config.yml
-        plugin.reloadConfig();
-        this.config.load(new File(plugin.getDataFolder(), "config.yml"));
+        synchronized (schedulerLock) {
+            // Reload config.yml
+            plugin.reloadConfig();
+            this.config.load(new File(plugin.getDataFolder(), "config.yml"));
 
-        // Update cached timezone after reload
-        this.cachedZoneId = loadZoneId();
+            dateTimeFormat = config.getString("datetime-format");
+            if (dateTimeFormat == null || dateTimeFormat.isEmpty()) {
+                this.formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
+            } else {
+                this.formatter = DateTimeFormatter.ofPattern(dateTimeFormat);
+            }
 
-        // Reload schedule.yml
-        File file = new File(plugin.getDataFolder(), scheduleFile);
-        if (!file.exists()) {
-            plugin.saveResource(scheduleFile, false);
+            // Update cached timezone after reload
+            this.cachedZoneId = loadZoneId();
+
+            // Reload schedule.yml
+            File file = new File(plugin.getDataFolder(), scheduleFile);
+            if (!file.exists()) {
+                plugin.saveResource(scheduleFile, false);
+            }
+            this.scheduler.load(file);
+
+            this.tasks = getSchedule();
         }
-        this.scheduler.load(file);
-
-        this.tasks = getSchedule();
     }
 
     public ScheduleTask getTask(String name) {
@@ -157,281 +180,291 @@ public class PluginConfig {
     }
 
     public List<ScheduleTask> getSchedule() {
-        List<ScheduleTask> schedule = new CopyOnWriteArrayList<>();
-        List<ScheduleTask> newActiveTasks = new CopyOnWriteArrayList<>();
+        synchronized (schedulerLock) {
+            List<ScheduleTask> schedule = new CopyOnWriteArrayList<>();
+            List<ScheduleTask> newActiveTasks = new CopyOnWriteArrayList<>();
 
-        ConfigurationSection section = scheduler.getConfigurationSection(nameConfig);
-        if (section == null) {
+            ConfigurationSection section = scheduler.getConfigurationSection(nameConfig);
+            if (section == null) {
+                this.activeTasks = newActiveTasks;
+                return schedule;
+            }
+
+            for (String key : section.getKeys(false)) {
+                ConfigurationSection taskSection = scheduler.getConfigurationSection(nameConfig + "." + key);
+                if (taskSection == null) continue;
+
+                List<String> command = taskSection.getStringList("command");
+                String typeStr = taskSection.getString("type");
+                TaskType type = TaskType.fromString(typeStr);
+                boolean enabled = taskSection.getBoolean("enabled");
+
+                if (type == null || command == null) {
+                    plugin.getLogger().warning("Task '" + key + "' has invalid configuration (missing type or command). Skipping...");
+                    continue;
+                }
+
+
+
+                if (type == TaskType.ONCE) {
+                    // format time (dd/MM/yyyy HH:mm)
+                    LocalDateTime time;
+                    try {
+                        String time_ = taskSection.getString("time");
+                        if (time_ == null) {
+                            plugin.getLogger().warning("Task '" + key + "' (once) is missing 'time' field. Skipping...");
+                            continue;
+                        }
+                        time = LocalDateTime.parse(time_, formatter);
+                    } catch (Exception e) {
+                        plugin.getLogger().warning("Task '" + key + "' has invalid time format: " + e.getMessage() + ". Skipping...");
+                        continue;
+                    }
+                    int startMinutes = (int) (time.atZone(getZoneId()).toEpochSecond() / 60);
+                    ScheduleTask task = new ScheduleTask(
+                            key,
+                            command,
+                            type,
+                            enabled,
+                            time,
+                            null,
+                            0,
+                            null,
+                            startMinutes
+                    );
+                    if (enabled) {
+                        newActiveTasks.add(task);
+                    }
+                    schedule.add(task);
+
+                } else if (type == TaskType.DAILY) {
+                    // format time (HH:mm)
+                    String time_ = taskSection.getString("time");
+                    if (time_ == null) {
+                        plugin.getLogger().warning("Task '" + key + "' (daily) is missing 'time' field. Skipping...");
+                        continue;
+                    }
+                    if (!DAILY_TIME_PATTERN.matcher(time_).matches()) {
+                        plugin.getLogger().warning("Task '" + key + "' (daily) has invalid time format: '" + time_ + "'. Expected HH:mm. Skipping...");
+                        continue;
+                    }
+                    LocalTime time = LocalTime.parse(time_);
+
+                    ScheduleTask task = new ScheduleTask(
+                            key,
+                            command,
+                            type,
+                            enabled,
+                            null,
+                            time,
+                            0,
+                            null
+                    );
+                    if (enabled) {
+                        newActiveTasks.add(task);
+                    }
+                    schedule.add(task);
+
+                } else if (type == TaskType.REPEAT) {
+                    // format time (minutes)
+                    String time_ = taskSection.getString("interval");
+                    if (time_ == null) {
+                        plugin.getLogger().warning("Task '" + key + "' (repeat) is missing 'interval' field. Skipping...");
+                        continue;
+                    }
+                    if (!REPEAT_PATTERN.matcher(time_).matches()) {
+                        plugin.getLogger().warning("Task '" + key + "' (repeat) has invalid interval format: '" + time_ + "'. Expected integer (minutes). Skipping...");
+                        continue;
+                    }
+                    long time = Long.parseLong(time_);
+                    int startMinutes = taskSection.getInt("start_minutes", 0);
+                    ScheduleTask task = new ScheduleTask(
+                            key,
+                            command,
+                            type,
+                            enabled,
+                            null,
+                            null,
+                            time,
+                            null,
+                            startMinutes
+                    );
+                    if (enabled) {
+                        newActiveTasks.add(task);
+                    }
+                    schedule.add(task);
+                } else if (type == TaskType.CRON) {
+                    // format: cron expression (e.g., "0 0 * * *")
+                    String cronExpr = taskSection.getString("cron");
+                    if (cronExpr == null) {
+                        plugin.getLogger().warning("Task '" + key + "' (cron) is missing 'cron' field. Skipping...");
+                        continue;
+                    }
+                    try {
+                        cronParser.parse(cronExpr);
+                    } catch (Exception e) {
+                        plugin.getLogger().warning("Task '" + key + "' (cron) has invalid cron expression: '" + cronExpr + "'. " + e.getMessage() + ". Skipping...");
+                        continue;
+                    }
+                    ScheduleTask task = new ScheduleTask(
+                            key,
+                            command,
+                            type,
+                            enabled,
+                            null,
+                            null,
+                            0,
+                            cronExpr
+                    );
+                    if (enabled) {
+                        newActiveTasks.add(task);
+                    }
+                    schedule.add(task);
+                }
+            }
+
+            // Atomically replace active tasks list
             this.activeTasks = newActiveTasks;
             return schedule;
         }
-        
-        for (String key : section.getKeys(false)) {
-            ConfigurationSection taskSection = scheduler.getConfigurationSection(nameConfig + "." + key);
-            if (taskSection == null) continue;
-
-            List<String> command = taskSection.getStringList("command");
-            String typeStr = taskSection.getString("type");
-            TaskType type = TaskType.fromString(typeStr);
-            boolean enabled = taskSection.getBoolean("enabled");
-
-            if (type == null || command == null) {
-                plugin.getLogger().warning("Task '" + key + "' has invalid configuration (missing type or command). Skipping...");
-                continue;
-            }
-
-
-
-            if (type == TaskType.ONCE) {
-                // format time (dd/MM/yyyy HH:mm)
-                LocalDateTime time;
-                try {
-                    String time_ = taskSection.getString("time");
-                    if (time_ == null) {
-                        plugin.getLogger().warning("Task '" + key + "' (once) is missing 'time' field. Skipping...");
-                        continue;
-                    }
-                    time = LocalDateTime.parse(time_, formatter);
-                } catch (Exception e) {
-                    plugin.getLogger().warning("Task '" + key + "' has invalid time format: " + e.getMessage() + ". Skipping...");
-                    continue;
-                }
-                int startMinutes = (int) (time.atZone(getZoneId()).toEpochSecond() / 60);
-                ScheduleTask task = new ScheduleTask(
-                        key,
-                        command,
-                        type,
-                        enabled,
-                        time,
-                        null,
-                        0,
-                        null,
-                        startMinutes
-                );
-                if (enabled) {
-                    newActiveTasks.add(task);
-                }
-                schedule.add(task);
-
-            } else if (type == TaskType.DAILY) {
-                // format time (HH:mm)
-                String time_ = taskSection.getString("time");
-                if (time_ == null) {
-                    plugin.getLogger().warning("Task '" + key + "' (daily) is missing 'time' field. Skipping...");
-                    continue;
-                }
-                if (!DAILY_TIME_PATTERN.matcher(time_).matches()) {
-                    plugin.getLogger().warning("Task '" + key + "' (daily) has invalid time format: '" + time_ + "'. Expected HH:mm. Skipping...");
-                    continue;
-                }
-                LocalTime time = LocalTime.parse(time_);
-
-                ScheduleTask task = new ScheduleTask(
-                        key,
-                        command,
-                        type,
-                        enabled,
-                        null,
-                        time,
-                        0,
-                        null
-                );
-                if (enabled) {
-                    newActiveTasks.add(task);
-                }
-                schedule.add(task);
-
-            } else if (type == TaskType.REPEAT) {
-                // format time (minutes)
-                String time_ = taskSection.getString("interval");
-                if (time_ == null) {
-                    plugin.getLogger().warning("Task '" + key + "' (repeat) is missing 'interval' field. Skipping...");
-                    continue;
-                }
-                if (!REPEAT_PATTERN.matcher(time_).matches()) {
-                    plugin.getLogger().warning("Task '" + key + "' (repeat) has invalid interval format: '" + time_ + "'. Expected integer (minutes). Skipping...");
-                    continue;
-                }
-                long time = Long.parseLong(time_);
-                int startMinutes = taskSection.getInt("start_minutes", 0);
-                ScheduleTask task = new ScheduleTask(
-                        key,
-                        command,
-                        type,
-                        enabled,
-                        null,
-                        null,
-                        time,
-                        null,
-                        startMinutes
-                );
-                if (enabled) {
-                    newActiveTasks.add(task);
-                }
-                schedule.add(task);
-            } else if (type == TaskType.CRON) {
-                // format: cron expression (e.g., "0 0 * * *")
-                String cronExpr = taskSection.getString("cron");
-                if (cronExpr == null) {
-                    plugin.getLogger().warning("Task '" + key + "' (cron) is missing 'cron' field. Skipping...");
-                    continue;
-                }
-                try {
-                    cronParser.parse(cronExpr);
-                } catch (Exception e) {
-                    plugin.getLogger().warning("Task '" + key + "' (cron) has invalid cron expression: '" + cronExpr + "'. " + e.getMessage() + ". Skipping...");
-                    continue;
-                }
-                ScheduleTask task = new ScheduleTask(
-                        key,
-                        command,
-                        type,
-                        enabled,
-                        null,
-                        null,
-                        0,
-                        cronExpr
-                );
-                if (enabled) {
-                    newActiveTasks.add(task);
-                }
-                schedule.add(task);
-            }
-        }
-
-        // Atomically replace active tasks list
-        this.activeTasks = newActiveTasks;
-        return schedule;
     }
 
     public String updateTime(String name, String time) {
-        ScheduleTask task = getTask(name);
-        if (task == null) {
-            return "Task not found";
+        synchronized (schedulerLock) {
+            ScheduleTask task = getTask(name);
+            if (task == null) {
+                return "Task not found";
+            }
+
+            TaskType taskType = task.getType();
+
+            if (taskType == TaskType.ONCE) {
+                LocalDateTime parsed;
+                try {
+                    parsed = LocalDateTime.parse(time, formatter);
+                } catch (Exception e) {
+                    return "Invalid time format (" + dateTimeFormat + ")";
+                }
+
+                if (parsed.isBefore(LocalDateTime.now())) {
+                    return "Time must be in the future";
+                }
+
+                scheduler.set(nameConfig + "." + name + ".time", time);
+
+            } else if (taskType == TaskType.DAILY) {
+                if (!DAILY_TIME_PATTERN.matcher(time).matches()) {
+                    return "Invalid time format (HH:mm)";
+                }
+                scheduler.set(nameConfig + "." + name + ".time", time);
+            } else if (taskType == TaskType.REPEAT) {
+                if (!REPEAT_PATTERN.matcher(time).matches()) {
+                    return "Invalid time format (minutes)";
+                }
+                scheduler.set(nameConfig + "." + name + ".interval", time);
+                // Also update start_minutes if provided in config (default 0)
+                int startMinutes = scheduler.getInt(nameConfig + "." + name + ".start_minutes", 0);
+                scheduler.set(nameConfig + "." + name + ".start_minutes", startMinutes);
+            } else if (taskType == TaskType.CRON) {
+                try {
+                    cronParser.parse(time);
+                } catch (Exception e) {
+                    return "Invalid cron expression";
+                }
+                scheduler.set(nameConfig + "." + name + ".cron", time);
+            }
+            saveConfig();
+            tasks = getSchedule();
+            return "Time updated";
         }
-
-        TaskType taskType = task.getType();
-        String path = nameConfig + "." + name + ".time";
-
-
-        if (taskType == TaskType.ONCE) {
-            LocalDateTime parsed;
-            try {
-                parsed = LocalDateTime.parse(time, formatter);
-            } catch (Exception e) {
-                return "Invalid time format (" + dateTimeFormat + ")";
-            }
-
-            if (parsed.isBefore(LocalDateTime.now())) {
-                return "Time must be in the future";
-            }
-
-
-            scheduler.set(nameConfig + "." + name + ".time", time);
-
-        } else if (taskType == TaskType.DAILY) {
-            if (!DAILY_TIME_PATTERN.matcher(time).matches()) {
-                return "Invalid time format (HH:mm)";
-            }
-            scheduler.set(nameConfig + "." + name + ".time", time);
-        } else if (taskType == TaskType.REPEAT) {
-            if (!REPEAT_PATTERN.matcher(time).matches()) {
-                return "Invalid time format (minutes)";
-            }
-            scheduler.set(nameConfig + "." + name + ".interval", time);
-            // Also update start_minutes if provided in config (default 0)
-            int startMinutes = scheduler.getInt(nameConfig + "." + name + ".start_minutes", 0);
-            scheduler.set(nameConfig + "." + name + ".start_minutes", startMinutes);
-        } else if (taskType == TaskType.CRON) {
-            try {
-                cronParser.parse(time);
-            } catch (Exception e) {
-                return "Invalid cron expression";
-            }
-            scheduler.set(nameConfig + "." + name + ".cron", time);
-        }
-        saveConfig();
-        tasks = getSchedule();
-        return "Time updated";
     }
 
     public void updateStatus(String name, boolean status) {
-        scheduler.set(nameConfig + "." + name + ".enabled", status);
-        saveConfig();
-        tasks = getSchedule();
+        synchronized (schedulerLock) {
+            scheduler.set(nameConfig + "." + name + ".enabled", status);
+            saveConfig();
+            tasks = getSchedule();
+        }
     }
 
     /**
      * Targeted update of task enabled flag without full schedule rebuild.
      */
     public void setTaskEnabled(String name, boolean status) {
-        scheduler.set(nameConfig + "." + name + ".enabled", status);
-        saveConfig();
+        synchronized (schedulerLock) {
+            scheduler.set(nameConfig + "." + name + ".enabled", status);
+            saveConfig();
+        }
     }
 
     public void updateCommand(String name, List<String> command) {
-        scheduler.set(nameConfig + "." + name + ".command", command);
-        saveConfig();
-        tasks = getSchedule();
+        synchronized (schedulerLock) {
+            scheduler.set(nameConfig + "." + name + ".command", command);
+            saveConfig();
+            tasks = getSchedule();
+        }
     }
 
     public boolean addTask(String name, String time, TaskType taskType, List<String> command) {
-        String basePath = nameConfig + "." + name;
+        synchronized (schedulerLock) {
+            String basePath = nameConfig + "." + name;
 
-        if (taskType == null) {
-            plugin.getLogger().warning("Invalid task type for task '" + name + "': null");
-            return false;
+            if (taskType == null) {
+                plugin.getLogger().warning("Invalid task type for task '" + name + "': null");
+                return false;
+            }
+
+            // Reset all schedule-specific fields to avoid stale data when overwriting task type.
+            scheduler.set(basePath + ".time", null);
+            scheduler.set(basePath + ".interval", null);
+            scheduler.set(basePath + ".cron", null);
+
+            // Validate time format based on task type
+            if (taskType == TaskType.ONCE) {
+                try {
+                    LocalDateTime.parse(time, formatter);
+                } catch (Exception e) {
+                    plugin.getLogger().warning("Invalid time format for task '" + name + "': " + time + " (expected: " + dateTimeFormat + ")");
+                    return false;
+                }
+                scheduler.set(basePath + ".time", time);
+            } else if (taskType == TaskType.DAILY) {
+                if (!DAILY_TIME_PATTERN.matcher(time).matches()) {
+                    plugin.getLogger().warning("Invalid time format for task '" + name + "': " + time + " (expected: HH:mm)");
+                    return false;
+                }
+                scheduler.set(basePath + ".time", time);
+            } else if (taskType == TaskType.REPEAT) {
+                if (!REPEAT_PATTERN.matcher(time).matches()) {
+                    plugin.getLogger().warning("Invalid time format for task '" + name + "': " + time + " (expected: minutes as integer)");
+                    return false;
+                }
+                scheduler.set(basePath + ".interval", time);
+            } else if (taskType == TaskType.CRON) {
+                try {
+                    cronParser.parse(time);
+                } catch (Exception e) {
+                    plugin.getLogger().warning("Invalid cron expression for task '" + name + "': " + time);
+                    return false;
+                }
+                scheduler.set(basePath + ".cron", time);
+            }
+
+            scheduler.set(basePath + ".enabled", true);
+            scheduler.set(basePath + ".type", taskType.getValue());
+            scheduler.set(basePath + ".command", command);
+            saveConfig();
+            this.tasks = getSchedule();
+            return true;
         }
-        String type = taskType.getValue();
-
-        // Reset all schedule-specific fields to avoid stale data when overwriting task type.
-        scheduler.set(basePath + ".time", null);
-        scheduler.set(basePath + ".interval", null);
-        scheduler.set(basePath + ".cron", null);
-
-        // Validate time format based on task type
-        if (taskType == TaskType.ONCE) {
-            try {
-                LocalDateTime.parse(time, formatter);
-            } catch (Exception e) {
-                plugin.getLogger().warning("Invalid time format for task '" + name + "': " + time + " (expected: " + dateTimeFormat + ")");
-                return false;
-            }
-            scheduler.set(basePath + ".time", time);
-        } else if (taskType == TaskType.DAILY) {
-            if (!DAILY_TIME_PATTERN.matcher(time).matches()) {
-                plugin.getLogger().warning("Invalid time format for task '" + name + "': " + time + " (expected: HH:mm)");
-                return false;
-            }
-            scheduler.set(basePath + ".time", time);
-        } else if (taskType == TaskType.REPEAT) {
-            if (!REPEAT_PATTERN.matcher(time).matches()) {
-                plugin.getLogger().warning("Invalid time format for task '" + name + "': " + time + " (expected: minutes as integer)");
-                return false;
-            }
-            scheduler.set(basePath + ".interval", time);
-        } else if (taskType == TaskType.CRON) {
-            try {
-                cronParser.parse(time);
-            } catch (Exception e) {
-                plugin.getLogger().warning("Invalid cron expression for task '" + name + "': " + time);
-                return false;
-            }
-            scheduler.set(basePath + ".cron", time);
-        }
-        
-        scheduler.set(basePath + ".enabled", true);
-        scheduler.set(basePath + ".type", taskType.getValue());
-        scheduler.set(basePath + ".command", command);
-        saveConfig();
-        this.tasks = getSchedule();
-        return true;
     }
 
     public void removeTask(String name) {
-        scheduler.set(nameConfig + "." + name, null);
-        saveConfig();
-        this.tasks = getSchedule();
+        synchronized (schedulerLock) {
+            scheduler.set(nameConfig + "." + name, null);
+            saveConfig();
+            this.tasks = getSchedule();
+        }
     }
 
     public JavaPlugin getPlugin() {
@@ -443,20 +476,24 @@ public class PluginConfig {
     }
 
     public void updateSchedule(ScheduleTask task) {
-        String key = task.getName();
-        scheduler.set(nameConfig + "." + key + ".command", task.getCommand());
-        scheduler.set(nameConfig + "." + key + ".type", task.getType().getValue());
-        scheduler.set(nameConfig + "." + key + ".enabled", task.isEnabled());
-        saveConfig();
+        synchronized (schedulerLock) {
+            String key = task.getName();
+            scheduler.set(nameConfig + "." + key + ".command", task.getCommand());
+            scheduler.set(nameConfig + "." + key + ".type", task.getType().getValue());
+            scheduler.set(nameConfig + "." + key + ".enabled", task.isEnabled());
+            saveConfig();
+        }
     }
 
 
     public void saveConfig() {
-        try {
-            scheduler.save(new File(plugin.getDataFolder(), "schedule.yml"));
-        } catch (Exception e) {
-            plugin.getLogger().severe("Failed to save schedule.yml: " + e.getMessage());
-            e.printStackTrace();
+        synchronized (schedulerLock) {
+            try {
+                scheduler.save(new File(plugin.getDataFolder(), "schedule.yml"));
+            } catch (Exception e) {
+                plugin.getLogger().severe("Failed to save schedule.yml: " + e.getMessage());
+                e.printStackTrace();
+            }
         }
     }
 }

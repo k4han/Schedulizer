@@ -1,25 +1,23 @@
 package me.virusker.schedulizer.timmer;
 
+import com.cronutils.model.time.ExecutionTime;
 import me.virusker.schedulizer.config.PluginConfig;
 import me.virusker.schedulizer.models.ScheduleTask;
 import me.virusker.schedulizer.models.TaskType;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
-import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
-import com.cronutils.model.time.ExecutionTime;
-
-public class BukkitRunnable extends org.bukkit.scheduler.BukkitRunnable {
+public class ScheduleTicker implements Runnable {
     private final PluginConfig config;
-    private Set<String> executedTasks = ConcurrentHashMap.newKeySet();
+    private final Set<String> executedTasks = ConcurrentHashMap.newKeySet();
     private int lastCheckedMinute = -1;
     private long lastCheckedDay = -1;
 
-    public BukkitRunnable(PluginConfig config) {
+    public ScheduleTicker(PluginConfig config) {
         this.config = config;
     }
 
@@ -39,8 +37,8 @@ public class BukkitRunnable extends org.bukkit.scheduler.BukkitRunnable {
         // Calculate total minutes from epoch (1970-01-01) to avoid reset at midnight
         long daysSinceEpoch = currentDate.toEpochDay();
         long totalMinutes = daysSinceEpoch * 24 * 60 +
-                            currentTime.getHour() * 60 +
-                            currentTime.getMinute();
+                currentTime.getHour() * 60 +
+                currentTime.getMinute();
 
         // Pre-compute ZonedDateTime for cron tasks (lazy - only create if cron tasks exist)
         ZonedDateTime nowForCron = null;
