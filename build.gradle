@@ -1,10 +1,13 @@
+import groovy.json.JsonSlurper
+
 plugins {
     id 'java'
     id 'com.github.johnrengelman.shadow' version '8.1.1'
+    id 'com.modrinth.minotaur' version '2.9.0'
 }
 
 group = 'io.github.virusker.schedulizer'
-version = '1.3'
+version = providers.gradleProperty('releaseVersion').orElse('1.3').get()
 
 repositories {
     mavenCentral()
@@ -21,6 +24,55 @@ repositories {
 dependencies {
     compileOnly("io.papermc.paper:paper-api:1.21.1-R0.1-SNAPSHOT")
     implementation("com.cronutils:cron-utils:9.2.1")
+}
+
+def githubRelease = [:]
+def githubEventPath = System.getenv("GITHUB_EVENT_PATH")
+if (githubEventPath) {
+    def githubEventFile = file(githubEventPath)
+    if (githubEventFile.isFile()) {
+        def githubEvent = new JsonSlurper().parse(githubEventFile)
+        if (githubEvent.release instanceof Map) {
+            githubRelease = githubEvent.release
+        }
+    }
+}
+
+def csvProperty = { String propertyName, String environmentName, String defaultValue ->
+    providers.gradleProperty(propertyName)
+            .orElse(providers.environmentVariable(environmentName))
+            .orElse(defaultValue)
+            .get()
+            .split(',')
+            .collect { it.trim() }
+            .findAll { !it.isEmpty() }
+}
+
+modrinth {
+    def modrinthToken = providers.environmentVariable('MODRINTH_TOKEN')
+    if (modrinthToken.isPresent()) {
+        token = modrinthToken.get()
+    }
+
+    def modrinthProjectId = providers.gradleProperty('modrinthProjectId')
+            .orElse(providers.environmentVariable('MODRINTH_PROJECT_ID'))
+    if (modrinthProjectId.isPresent()) {
+        projectId = modrinthProjectId.get()
+    }
+
+    versionNumber = project.version.toString()
+    versionName = providers.gradleProperty('modrinthVersionName')
+            .orElse((githubRelease.name ?: project.version).toString())
+            .get()
+    changelog = providers.gradleProperty('modrinthChangelog')
+            .orElse((githubRelease.body ?: 'See the GitHub release notes.').toString())
+            .get()
+    versionType = providers.gradleProperty('modrinthVersionType')
+            .orElse(githubRelease.prerelease == true ? 'beta' : 'release')
+            .get()
+    uploadFile = tasks.shadowJar
+    gameVersions = csvProperty('modrinthGameVersions', 'MODRINTH_GAME_VERSIONS', '1.21.1')
+    loaders = csvProperty('modrinthLoaders', 'MODRINTH_LOADERS', 'paper,purpur,folia')
 }
 //
 //dependencies {

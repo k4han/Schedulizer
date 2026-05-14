@@ -1,0 +1,57 @@
+name: Publish to Modrinth
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    name: Build and publish
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Set up Java
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Resolve release version
+        id: release-version
+        shell: bash
+        run: |
+          tag="${{ github.event.release.tag_name }}"
+          version="${tag#v}"
+          echo "value=$version" >> "$GITHUB_OUTPUT"
+
+      - name: Validate Modrinth configuration
+        shell: bash
+        env:
+          MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}
+          MODRINTH_PROJECT_ID: ${{ secrets.MODRINTH_PROJECT_ID }}
+        run: |
+          if [ -z "$MODRINTH_TOKEN" ]; then
+            echo "::error::Missing required repository secret MODRINTH_TOKEN"
+            exit 1
+          fi
+          if [ -z "$MODRINTH_PROJECT_ID" ]; then
+            echo "::error::Missing required repository secret MODRINTH_PROJECT_ID"
+            exit 1
+          fi
+
+      - name: Build and publish to Modrinth
+        env:
+          MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}
+          MODRINTH_PROJECT_ID: ${{ secrets.MODRINTH_PROJECT_ID }}
+          MODRINTH_GAME_VERSIONS: ${{ vars.MODRINTH_GAME_VERSIONS || '1.21.1' }}
+          MODRINTH_LOADERS: ${{ vars.MODRINTH_LOADERS || 'paper,purpur,folia' }}
+        run: ./gradlew clean build modrinth -PreleaseVersion="${{ steps.release-version.outputs.value }}"
